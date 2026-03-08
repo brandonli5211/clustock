@@ -1,0 +1,14 @@
+# CSC111 Winter 2026 - Project 2: Clustock
+# Stock Market Correlation Network
+
+# Data
+yfinance
+pandas
+numpy
+
+# Visualization (Phase 2 requirement: new library)
+plotly
+networkx
+
+# Testing and code checking
+python-ta

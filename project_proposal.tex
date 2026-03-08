@@ -1,0 +1,82 @@
+\documentclass[fontsize=11pt]{article}
+\usepackage{amsmath}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+\title{\textbf{CSC111 Project Proposal: The Stock Market Correlation Network}}
+\author{Tyler Christopher Lin, Brandon Zento Li, Houssam Kadri, Frank Huang}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Problem Description and Research Question}
+
+Our problem: The stock market is very difficult to predict. Traditional financial categorization relies on the Global Industry Classification (GICS), which is a hierarchical framework that investors use to categorize over 43,000 companies into 11 broad sectors such as "Technology" or "Energy". These labels however assume that companies within a sector behave similarly while companies in other sectors are distinct. With market value being directly correlated to real-time, unpredictable geopolitical and socioeconomic events, no one truly knows how stocks will rise and fall at any given time. Many events in life affect at least two parties in different ways. Therefore, it is natural for an event in real life to directly (or indirectly) cause one stock to rise and another to fall. One of the most prevalent of such events are supply chain dependencies. For example, a shortage in computer chip manufacturing will not only affect the tech industry, but potentially the automotive and healthcare industries as well.
+
+Our project will investigate the structural integrity of these labels defined by the GICS through building a dynamic graph of the market based on mathematical price correlation. It will compare stable periods to volatile periods of stock movement, determining if the market structure remains distinct or collapses into a single cluster during a crash.
+
+\textbf{Our question:} \textbf{To what extent do traditional GICS (Global Industry Classification Standard) sectors remain mathematically distinct to one another during periods of high market volatility, and can graph-based detection identify 'pivot stocks' that supposedly connect unrelated industries?}
+
+\section*{Computational Plan}
+
+\subsection*{Data Collection}
+Our project will model the relationship between publicly traded stocks as a \textbf{Weighted, Undirected Graph}. Each node of the graph will represent an individual stock (storing ticker symbol, current price data, and GICS sector).
+
+An edge between two nodes represents the weighted correlation between the two stocks at a certain point in time.
+
+Our data will be sourced from \textbf{yfinance}, a public open-source Python library that takes historical and, more importantly, real-time financial data directly from Yahoo Finance. We are specifically targeting the 100 constituent stocks of the S\&P 100 index to ensure a diverse representation of the 11 GICS sectors. We will be taking the open, high, low, close, and adjusted prices, as well as trading volumes. We will then use \textbf{pandas} to clean and synchronize this data across two distinct 4-month windows (Stable and Volatile) to compare differing market conditions. We will use the S\&P 100 initially for computational efficiency and visual clarity; however, if the identified trends are not sufficiently visual or if more data is required, we will expand our dataset to include the full S\&P 500.
+
+\vspace{1em}
+\noindent Below is a sample of the structured data retrieved for a single stock, showing the price data our algorithms will process:
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+\textbf{Ticker} & \textbf{Date} & \textbf{Open} & \textbf{Close} & \textbf{Adj Close} & \textbf{Volume} \\ \hline
+AAPL & 2025-01-02 & 184.22 & 185.64 & 185.64 & 64,220,000 \\ \hline
+MSFT & 2025-01-02 & 370.10 & 372.50 & 372.50 & 22,450,000 \\ \hline
+JPM  & 2025-01-02 & 170.15 & 172.10 & 172.10 & 12,100,000 \\ \hline
+\end{tabular}
+\end{center}
+
+\subsection*{Computations}
+After collecting this data, we will turn each stock into a graph node, with its item being the ticker symbol. After creating all the nodes, we will then create edges between two nodes whose correlation is strong; if it's weak, then there is a good chance that there is no correlation, and we do not need to create an edge between them.
+
+To calculate this correlation, we will first calculate the log return $R_t$ of each stock, which tells us the stock's price change over a certain period of time. This will be done with \textbf{numpy}, where we we will write a custom function to transform prices into log returns using the formula:
+\[ R_t = \ln\left(\frac{P_t}{P_{t-1}}\right) = \ln(P_t) - \ln(P_{t-1}) \]
+where $P_t$ is the end price of the stock and $P_{t-1}$ is the start price.
+
+After calculating the log return of each stock, we will then calculate its Pearson correlation coefficient compared to other stocks' log returns. The Pearson correlation coefficient $r$ is a 1 with a perfectly linear and positive correlation, -1 with a perfectly linear and negative correlation, and 0 if there is no correlation. This is so that we would be able to see how one stock changes value as the other stocks change values. To calculate the Pearson correlation coefficient for two lists of log returns $a_n$ and $b_n$, let:
+\begin{itemize}
+    \item $a_i$ be the values in $a_n$
+    \item $a_{avg}$ be the average of all values in $a_n$
+    \item $b_i$ be the values in $b_n$
+    \item $b_{avg}$ be the average of all values in $b_n$
+\end{itemize}
+\[ r = \frac{\sum[(a_i - a_{avg})(b_i - b_{avg})]}{\sqrt{\sum[(a_i - a_{avg})^2] \times \sum[(b_i - b_{avg})^2]}} \]
+
+After calculating all of these coefficients, we will create an edge between two nodes in our graph when the $r$ value between two stocks goes above/below a certain threshold (if $|r| > 0.7$).
+
+\begin{enumerate}
+    \item \textbf{Graph Density Analysis:} We will implement a function to calculate graph density, $D = \frac{2|E|}{|V|(|V|-1)}$, to mathematically prove if sectors merge into a single cluster/group during market crashes. This formula is taken from networkx documentation.\textsuperscript{4}
+    \item \textbf{Custom BFS Simulation:} We will implement our own custom Breadth-First Search algorithm to simulate market crashes based on a single stock. Starting from a user-selected "crashing" stock, the algorithm will traverse the graph layer-by-layer to identify all nodes within two degrees of separation. This will allow us to quantify the "reach" of a shock across different GICS sectors and identify the "pivot stocks" that connect supposedly unrelated industries.
+\end{enumerate}
+
+\subsection*{Visualization}
+Finally, to visualize the graph, we will be using \textbf{plotly}. We plan for the graph to give additional data about the node (log return, start/end price, etc.) that the mouse cursor is hovering over, and color coding for positive and negative correlations. Users will also be able to toggle between "GICS Sector Colors" and our "Calculated Cluster Colors." We will implement a hover above a node function so that users can see a stock's impact score (which we calculate from the centrality and BFS analysis).
+
+\section*{References}
+\begin{enumerate}
+    \item Aroussi, R. (2024). \textit{yfinance: An Open-Source Tool}. \url{https://github.com/ranaroussi/yfinance}
+    \item The pandas development team (2024). \textit{pandas-dev/pandas: Pandas Documentation}. \url{https://pandas.pydata.org/docs/}
+    \item Harris, C. R., et al. (2020). \textit{Array programming with NumPy}. Nature. \url{https://numpy.org/doc/}
+    \item NetworkX Developers. (2024). \textit{NetworkX Density Function Documentation}. \url{https://networkx.org/documentation/stable/reference/generated/networkx.classes.function.density.html}
+    \item Plotly Technologies Inc. (2024). \textit{Interactive Graphing Library for Python}. \url{https://plotly.com/python/}
+    \item MSCI and S\&P Dow Jones Indices. (2023). \textit{GICS Sector Methodology Overview}.
+\end{enumerate}
+
+\end{document}

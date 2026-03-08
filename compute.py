@@ -1,0 +1,49 @@
+"""CSC111 Winter 2026 - Project 2: Stock Market Correlation Network (Clustock)
+
+Computation module: log returns, Pearson correlation, graph building.
+"""
+
+from __future__ import annotations
+import pandas as pd
+from correlation_graph import CorrelationGraph
+from constants import CORRELATION_THRESHOLD
+
+
+def compute_log_returns(prices: list[float]) -> list[float]:
+    """Compute log returns R_t = ln(P_t / P_{t-1}) for a price series.
+
+    Returns list of length len(prices)-1.
+    """
+    raise NotImplementedError("TODO: implement")
+
+
+def pearson_correlation(a: list[float], b: list[float]) -> float:
+    """Compute Pearson correlation coefficient between two equal-length series.
+
+    Returns r in [-1, 1]. r=1: perfect positive, r=-1: perfect negative, r=0: no correlation.
+    Formula: r = sum[(a_i - a_avg)(b_i - b_avg)] / (sqrt(sum[(a_i - a_avg)^2]) * sqrt(sum[(b_i - b_avg)^2]))
+    """
+    raise NotImplementedError("TODO: implement")
+
+
+def build_correlation_graph(
+    df: pd.DataFrame,
+    sectors: dict[str, str],
+    threshold: float = CORRELATION_THRESHOLD
+) -> CorrelationGraph:
+    """Build weighted undirected graph from price data.
+
+    Nodes = stocks (ticker, sector). Edges = pairs with |correlation| > threshold.
+    Use Adj Close (or Close) for log returns, then Pearson correlation between pairs.
+    """
+    raise NotImplementedError("TODO: implement")
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
+    import python_ta
+    python_ta.check_all(config={
+        'max-line-length': 120,
+        'extra-imports': ['pandas', 'correlation_graph', 'constants'],
+    })
