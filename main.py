@@ -1,6 +1,6 @@
 """CSC111 Winter 2026 - Project 2: Stock Market Correlation Network (Clustock)
 
-Main entry point. Run this file to execute the full pipeline.
+Main FIle
 """
 
 from __future__ import annotations
