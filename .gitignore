@@ -15,17 +15,3 @@ build/
 .vscode/
 *.swp
 *.swo
-
-# Data (if you cache downloads)
-*.csv
-data/
-cache/
-
-# LaTeX
-*.aux
-*.log
-*.out
-*.toc
-*.bbl
-*.blg
-*.synctex.gz
