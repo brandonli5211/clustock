@@ -118,7 +118,7 @@ if __name__ == '__main__':
     g = CorrelationGraph()
     g.add_node({'AAPL', 'GOOGL'}, period='5d', interval='1d')
     g.add_node('JPM', period='1mo', interval='1wk')
-    g_vertices = g.get_all_tickers()
+    g_vertices = g.get_vertices()
     example = {g_vertices[ticker].open_price: g_vertices[ticker].close_price for ticker in g_vertices
                if g_vertices[ticker].ticker == "AAPL"}
     pprint.pprint(example)
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     # for start and end dates, it goes from dates start to end exclusive [start, end)
     g2.add_node({'GOOGL'}, start='2026-03-01', end='2026-03-06', interval='1d')  # Can do start, end times
     g2.add_node({'META', 'NVDA'}, start='2026-03-02', end='2026-03-06', interval='1d')
-    pprint.pprint(g2.get_all_tickers())
+    pprint.pprint(g2.get_vertices())
     pprint.pprint(g2.get_vertices_ticker('META'))
     # import doctest
     # doctest.testmod()
