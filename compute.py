@@ -4,9 +4,37 @@ Computation module: log returns, Pearson correlation, graph building.
 """
 
 from __future__ import annotations
+from typing import Optional
 import pandas as pd
 from correlation_graph import CorrelationGraph
+from data_reader import download_tickers, get_sectors_for_tickers
 from constants import CORRELATION_THRESHOLD
+
+
+def add_nodes_from_tickers(
+    graph: CorrelationGraph,
+    tickers: list[str] | set[str],
+    period: Optional[str] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    interval: Optional[str] = None,
+) -> pd.DataFrame:
+    """Fetch price data and sector info, then add one node per ticker to the graph.
+
+    This is the logic that used to live in CorrelationGraph.add_node.
+    Returns the downloaded DataFrame (for use by build_correlation_graph).
+
+    Preconditions:
+        - period is not None, or (start and end are provided)
+    """
+    ticker_list = list(tickers) if isinstance(tickers, set) else tickers
+    df = download_tickers(
+        set(ticker_list), period=period, start=start, end=end, interval=interval
+    )
+    sectors = get_sectors_for_tickers(ticker_list)
+    for ticker in ticker_list:
+        graph.add_node(ticker, sectors.get(ticker, 'Unknown'))
+    return df
 
 
 def compute_log_returns(prices: list[float]) -> list[float]:
@@ -45,5 +73,5 @@ if __name__ == '__main__':
     import python_ta
     python_ta.check_all(config={
         'max-line-length': 120,
-        'extra-imports': ['pandas', 'correlation_graph', 'constants'],
+        'extra-imports': ['pandas', 'correlation_graph', 'data_reader', 'constants'],
     })

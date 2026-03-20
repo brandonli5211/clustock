@@ -69,32 +69,42 @@ def access_all_stocks(tickers: DataFrame) -> Any:
     return all_info
 
 
-def download_tickers(tickers_list: set[str],
+def get_sectors_for_tickers(tickers: list[str]) -> dict[str, str]:
+    """Return sector for each ticker from GICS via yfinance.
+
+    Returns {ticker: sector} for all tickers. Uses 'Unknown' if sector missing.
+    Preconditions:
+        - tickers contains valid yfinance ticker symbols
+    """
+    result: dict[str, str] = {}
+    for t in tickers:
+        sector = yf.Ticker(t).info.get('sector', 'Unknown')
+        result[t] = sector
+    return result
+
+
+def download_tickers(tickers_list: set[str] | list[str],
                      period: Optional[str] = None,
                      start: Optional[str] = None, end: Optional[str] = None,
                      interval: Optional[str] = None) -> pd.DataFrame:
-    """Download the tickers.
-    This will also give us many pieces of data needed, such as Open, Close, High, Low, etc.
-    Order of attributes:
-        - Date
-        - Ticker
-        - Adj Close
-        - Close
-        - High
-        - Low
-        - Open
-        - Volume
+    """Download historical price data for the given tickers.
+
+    Returns a DataFrame with columns: Date, Ticker, Open, Close, High, Low, Volume.
+    Use Close (or Adj Close if available) for log-return calculations.
+    One row per (Date, Ticker). Accepts list or set of ticker strings.
+
     Preconditions:
-        - every ticker in tickers must be a valid ticker in yfinance
-        - period is not None or (start is None or end is None)
+        - every ticker in tickers_list is a valid yfinance ticker symbol
+        - period is not None or (start and end are provided)
     """
     # Main arguments for yf.download(): tickers list, period, interval, threads=False
     # Without threads=False, download may not work.
     # pandas imported from the download, so we can flatten the table given by yf.download().
     #     # doing this will make accessing the data much easier and more readable.
+    tickers_set = set(tickers_list) if isinstance(tickers_list, list) else tickers_list
     params = {'period': period, 'interval': interval, 'start': start, 'end': end}
     params = {k: s for k, s in params.items() if s}
-    data = yf.download(tickers_list, threads=False, progress=False, **params)
+    data = yf.download(tickers_set, threads=False, progress=False, **params)
     # auto_adjust is default True, so Close becomes Adj Close.
 
     if isinstance(data.columns, pd.MultiIndex):  # Adding more than one ticker
@@ -107,7 +117,7 @@ def download_tickers(tickers_list: set[str],
         data_flattened.rename(columns={'level_0': 'Date', 'level_1': 'Ticker'}, inplace=True)
     else:  # Only want to add one ticker
         data_flattened = data.reset_index()
-        data_flattened['Ticker'] = next(iter(tickers_list))
+        data_flattened['Ticker'] = next(iter(tickers_set))
     return data_flattened
 
 
