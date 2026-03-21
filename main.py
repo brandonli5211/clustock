@@ -16,7 +16,7 @@ def run_full_pipeline(use_sample: bool = True) -> None:
 
     If use_sample=True, uses only first 15 tickers for faster testing.
     """
-    tickers = SP100_TICKERS[:15] if use_sample else SP100_TICKERS
+    tickers = set(SP100_TICKERS[:15]) if use_sample else set(SP100_TICKERS)
     print('Downloading data for', len(tickers), 'tickers...')
     df = download_tickers(tickers, period='1mo', interval='1d')
     print('Data shape:', df.shape)
