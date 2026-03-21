@@ -68,24 +68,8 @@ class CorrelationGraph:
         return 2 * edge_count / (n * (n - 1))
 
     def bfs_crash_simulation(self, start_ticker: str, max_depth: int = BFS_DEPTH) -> dict[int, set[str]]:
-        """BFS from a 'crashing' stock. Returns {depth: set of tickers at that depth}."""
-        if start_ticker not in self._vertices:
-            return {}
-        result: dict[int, set[str]] = {}
-        seen: set[str] = set()
-        current: set[str] = {start_ticker}
-        depth = 0
-        while depth <= max_depth and current:
-            result[depth] = set(current)
-            seen.update(current)
-            next_layer: set[str] = set()
-            for ticker in current:
-                for neighbour in self._vertices[ticker].neighbours:
-                    if neighbour not in seen:
-                        next_layer.add(neighbour)
-            current = next_layer
-            depth += 1
-        return result
+        """BFS from a 'crashing' stock. Returns {depth: set of tickers at that depth}. Not sure what we'll use this for exactly yet"""
+    
 
     def get_pivot_candidates(self, start_ticker: str) -> list[tuple[str, int]]:
         """Stocks that connect multiple sectors within BFS reach.
