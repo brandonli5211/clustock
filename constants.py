@@ -13,7 +13,7 @@ SP100_TICKERS = [
     'TMO', 'DHR', 'NEE', 'ADBE', 'NKE', 'CRM', 'PM', 'TXN', 'BMY', 'UNP',
     'RTX', 'HON', 'UPS', 'LOW', 'AMGN', 'QCOM', 'INTU', 'SPGI', 'CAT', 'AXP',
     'DE', 'BKNG', 'AMAT', 'SBUX', 'GILD', 'ADI', 'LMT', 'MDT', 'VZ', 'ISRG',
-    'REGN', 'PLD', 'BLK', 'T', 'SYK', 'CI', 'MMC', 'NOW', 'CMCSA', 'ZTS',
+    'REGN', 'PLD', 'BLK', 'T', 'SYK', 'CI', 'NOW', 'CMCSA', 'ZTS',  # MMC removed (delisted/relisted)
     'DUK', 'SO', 'BDX', 'BSX', 'EOG', 'SLB', 'PGR', 'EQIX', 'ITW', 'MO',
     'APD', 'APTV', 'KLAC', 'SHW', 'MCK', 'PANW', 'PSA', 'WM', 'CB', 'MDLZ',
     'CME', 'ADP', 'ELV', 'NXPI', 'ORLY', 'SNPS', 'CDNS', 'MAR', 'CL', 'ECL',

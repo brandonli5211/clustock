@@ -26,5 +26,5 @@ def run_full_pipeline(use_sample: bool = True) -> None:
 
 
 if __name__ == '__main__':
-    # Use sample (15 tickers) for quick demo. Set use_sample=False for full S&P 100.
-    run_full_pipeline(use_sample=True)
+    # use_sample=False for full S&P 100 (~100 tickers); True for 15 tickers (faster).
+    run_full_pipeline(use_sample=False)
