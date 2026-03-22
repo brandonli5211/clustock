@@ -6,7 +6,6 @@ Computation module: log returns, Pearson correlation, graph building.
 from __future__ import annotations
 from typing import Optional
 from math import log
-import pprint
 import pandas as pd
 from correlation_graph import CorrelationGraph
 from data_reader import download_tickers, get_sectors_for_tickers
@@ -27,8 +26,9 @@ def log_return_list(df: pd.DataFrame) -> dict[str, list[float]]:
     """Return a dictionary of ticker keys to a list of log returns value for the corresponding ticker."""
     log_returns = {}
     for ticker, group in df.groupby('Ticker'):
+        group_sorted = group.sort_values('Date')
         # .dropna() remove NaN rows if a stock doesn't have a close price, and p > 0 removes zero/negative prices
-        close_prices = [p for p in list(group['Close'].dropna()) if p > 0]
+        close_prices = [p for p in list(group_sorted['Close'].dropna()) if p > 0]
         if len(close_prices) < 2:  # need at least two close prices to calculate a log return
             continue
         log_returns[ticker] = compute_log_returns(close_prices)
@@ -65,7 +65,7 @@ def create_edges_in_graph(graph: CorrelationGraph,
     Create edges in graph, using the log_returns of the tickers in graph.
     Designed as a helper function to build_correlation_graph().
     Preconditions:
-    - 0 < threshold < 1
+    - 0 <= threshold <= 1
     """
     for i in range(len(tickers)):
         for j in range(i + 1, len(tickers)):
@@ -95,7 +95,7 @@ def build_correlation_graph(
     - All tickers in tickers are valid yfinance ticker symbols.
     - (period is None) != (date_range is None)
     - if date_range is not None, len(date_range) == 2, date_range[0] is the start date, date_range[1] is the end date
-    - 0 < threshold < 1
+    - 0 <= threshold <= 1
     """
     g = CorrelationGraph()
     start, end = date_range if date_range else (None, None)
@@ -121,5 +121,5 @@ if __name__ == '__main__':
     # import python_ta
     # python_ta.check_all(config={
     #     'max-line-length': 120,
-    #     'extra-imports': ['pandas', 'correlation_graph', 'data_reader', 'constants', 'math', 'pprint'],
+    #     'extra-imports': ['pandas', 'correlation_graph', 'data_reader', 'constants', 'math'],
     # })

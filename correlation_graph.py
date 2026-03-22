@@ -68,8 +68,8 @@ class CorrelationGraph:
         return 2 * edge_count / (n * (n - 1))
 
     def bfs_crash_simulation(self, start_ticker: str, max_depth: int = BFS_DEPTH) -> dict[int, set[str]]:
-        """BFS from a 'crashing' stock. Returns {depth: set of tickers at that depth}. Not sure what we'll use this for exactly yet"""
-    
+        """BFS from a 'crashing' stock. Returns {depth: set of tickers at that depth}."""
+        raise NotImplementedError("TODO: implement")
 
     def get_pivot_candidates(self, start_ticker: str) -> list[tuple[str, int]]:
         """Stocks that connect multiple sectors within BFS reach.
@@ -103,8 +103,8 @@ class CorrelationGraph:
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
-    import python_ta
-    python_ta.check_all(config={
-        'max-line-length': 120,
-        'extra-imports': ['constants'],
-    })
+    # import python_ta
+    # python_ta.check_all(config={
+    #     'max-line-length': 120,
+    #     'extra-imports': ['constants'],
+    # })
