@@ -5,7 +5,11 @@ One node per ticker. Populated by compute.build_correlation_graph().
 """
 
 from __future__ import annotations
+
+from operator import add
+
 from constants import BFS_DEPTH
+from collections import deque
 
 
 class _Vertex:
@@ -69,7 +73,37 @@ class CorrelationGraph:
 
     def bfs_crash_simulation(self, start_ticker: str, max_depth: int = BFS_DEPTH) -> dict[int, set[str]]:
         """BFS from a 'crashing' stock. Returns {depth: set of tickers at that depth}."""
-        raise NotImplementedError("TODO: implement")
+        # Todo: Test through this code to make sure it works
+
+        queue = deque()
+        visited = {}
+        nodes_at_depths = {} # Output set
+        depth = 0
+
+        #BFS
+        queue.append(start_ticker)
+        visited[start_ticker] = 0
+
+        # https://www.geeksforgeeks.org/python/how-to-check-if-a-deque-is-empty-in-python/
+        while len(queue) != 0:
+            curr = queue.popleft()
+            if visited[curr] > max_depth: # if we reach a node greater than max, we're past the last layer
+                return nodes_at_depths
+
+            if visited[curr] not in nodes_at_depths.keys():
+                nodes_at_depths[visited[curr]] = set()
+
+            nodes_at_depths[visited[curr]].add(curr)
+
+            # Adding neighbours to the queue
+            for next in self.get_neighbours(curr):
+                if next not in visited.keys():
+                    queue.append(next)
+                    visited[next] = depth + 1
+
+            depth += 1
+
+        return nodes_at_depths
 
     def get_pivot_candidates(self, start_ticker: str) -> list[tuple[str, int]]:
         """Stocks that connect multiple sectors within BFS reach.

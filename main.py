@@ -22,6 +22,7 @@ def run_full_pipeline(use_sample: bool = True) -> None:
     print('Nodes:', len(graph.get_all_tickers()))
 
     print('Opening interactive visualization...')
+    print("Pivot candidates", graph.get_pivot_candidates('AAPL'))
     run_visualization(graph)
 
 
