@@ -1,6 +1,7 @@
-"""CSC111 Winter 2026 - Project 2: Stock Market Correlation Network (Clustock)
+"""CSC111 Winter 2026 - Project 2: Clustock
 
-Computation module: log returns, Pearson correlation, graph building.
+Computation module: log returns, Pearson correlation, and building the correlation graph
+from downloaded price data.
 """
 
 from __future__ import annotations
@@ -23,7 +24,14 @@ def compute_log_returns(prices: list[float]) -> list[float]:
 
 
 def log_return_list(df: pd.DataFrame) -> dict[str, list[float]]:
-    """Return a dictionary of ticker keys to a list of log returns value for the corresponding ticker."""
+    """Map each ticker to its daily log-return series.
+
+    Expects columns 'Ticker', 'Date', 'Close' (from download_tickers). Rows are sorted by
+    date per ticker. Tickers with fewer than two valid close prices are omitted.
+
+    Preconditions:
+        - df has columns Ticker, Date, Close as produced by data_reader.download_tickers.
+    """
     log_returns = {}
     for ticker, group in df.groupby('Ticker'):
         group_sorted = group.sort_values('Date')

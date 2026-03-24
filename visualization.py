@@ -1,12 +1,12 @@
-"""CSC111 Winter 2026 - Project 2: Stock Market Correlation Network (Clustock)
+"""CSC111 Winter 2026 - Project 2: Clustock
 
 Plotly-based interactive visualization of the correlation graph.
 
 WHAT THE GRAPH VISUALIZES
 -------------------------
-This graph is a *stock correlation network*. Each node is a stock (S&P 100 ticker).
-An edge between two stocks means their *log returns* over the chosen period have a
-Pearson correlation |r| > threshold (default 0.7). In plain terms:
+This graph is a stock correlation network. Each node is a stock (S&P 100 ticker).
+An edge between two stocks means their log returns over the chosen period have a
+Pearson correlation |r| > threshold (default 0.7).
   - Connected stocks tend to move together (r > 0) or oppositely (r < 0) in price.
   - Unconnected stocks have weaker or no significant price-movement relationship.
 """

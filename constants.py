@@ -1,6 +1,6 @@
-"""CSC111 Winter 2026 - Project 2: Stock Market Correlation Network (Clustock)
+"""CSC111 Winter 2026 - Project 2: Clustock
 
-Constants and configuration for the Clustock project.
+Constants: tickers, periods, correlation threshold, BFS depth.
 """
 
 # S&P 100  tickers (as of 2024-2025)
@@ -13,7 +13,7 @@ SP100_TICKERS = [
     'TMO', 'DHR', 'NEE', 'ADBE', 'NKE', 'CRM', 'PM', 'TXN', 'BMY', 'UNP',
     'RTX', 'HON', 'UPS', 'LOW', 'AMGN', 'QCOM', 'INTU', 'SPGI', 'CAT', 'AXP',
     'DE', 'BKNG', 'AMAT', 'SBUX', 'GILD', 'ADI', 'LMT', 'MDT', 'VZ', 'ISRG',
-    'REGN', 'PLD', 'BLK', 'T', 'SYK', 'CI', 'NOW', 'CMCSA', 'ZTS',  # MMC removed (delisted/relisted)
+    'REGN', 'PLD', 'BLK', 'T', 'SYK', 'CI', 'NOW', 'CMCSA', 'ZTS',
     'DUK', 'SO', 'BDX', 'BSX', 'EOG', 'SLB', 'PGR', 'EQIX', 'ITW', 'MO',
     'APD', 'APTV', 'KLAC', 'SHW', 'MCK', 'PANW', 'PSA', 'WM', 'CB', 'MDLZ',
     'CME', 'ADP', 'ELV', 'NXPI', 'ORLY', 'SNPS', 'CDNS', 'MAR', 'CL', 'ECL',

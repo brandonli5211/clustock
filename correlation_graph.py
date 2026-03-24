@@ -1,12 +1,10 @@
-"""CSC111 Winter 2026 - Project 2: Stock Market Correlation Network (Clustock)
+"""CSC111 Winter 2026 - Project 2: Clustock
 
-Weighted undirected graph for stock correlations.
-One node per ticker. Populated by compute.build_correlation_graph().
+Weighted undirected graph for stock correlations: nodes are tickers with GICS sectors;
+edges store Pearson correlation weights above a threshold.
 """
 
 from __future__ import annotations
-
-from operator import add
 
 from constants import BFS_DEPTH
 from collections import deque
@@ -72,9 +70,17 @@ class CorrelationGraph:
         return 2 * edge_count / (n * (n - 1))
 
     def bfs_crash_simulation(self, start_ticker: str, max_depth: int = BFS_DEPTH) -> dict[int, set[str]]:
-        """BFS from a 'crashing' stock. Returns {depth: set of tickers at that depth}."""
-        # Todo: Test through this code to make sure it works
+        """Breadth-first search from start_ticker along correlation edges.
 
+        Depth 0 is the start ticker; depth k is tickers k edges away (not yet visited).
+        Used to model how far a price shock could propagate through the network.
+
+        Returns:
+            Mapping from depth (int) to the set of tickers first reached at that depth.
+
+        Preconditions:
+            - start_ticker is in the graph.
+        """
         queue = deque()
         visited = {}
         nodes_at_depths = {} # Output set
@@ -126,7 +132,7 @@ class CorrelationGraph:
                     sectors_touched.add(self._vertices[neighbour].sector)
             if len(sectors_touched) > 1:
                 pivots.append((ticker, len(sectors_touched)))
-        # Step 3: Sort by sector_count descending. The key=lambda gives the
+        # Sort by sector_count descending. The key=lambda gives the
         # sort value: -p[1] means "use negative of sector count" so higher
         # counts appear first (e.g. -3 < -2, so 3 sorts before 2).
         def _sector_count_desc(pair: tuple[str, int]) -> int:
