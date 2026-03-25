@@ -26,8 +26,5 @@ SP100_TICKERS = [
 STABLE_PERIOD = '4mo'   # Will use specific start/end dates
 VOLATILE_PERIOD = '4mo'
 
-# Correlation threshold for creating edges (|r| > 0.7)
-CORRELATION_THRESHOLD = 0.7
-
 # BFS depth for crash simulation (degrees of separation)
 BFS_DEPTH = 2
