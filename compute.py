@@ -10,7 +10,6 @@ from math import log
 import pandas as pd
 from correlation_graph import CorrelationGraph
 from data_reader import download_tickers, get_sectors_for_tickers
-from constants import CORRELATION_THRESHOLD
 
 
 def compute_log_returns(prices: list[float]) -> list[float]:
@@ -68,7 +67,7 @@ def pearson_correlation(a: list[float], b: list[float]) -> float:
 def create_edges_in_graph(graph: CorrelationGraph,
                           log_returns: dict[str, list[float]],
                           tickers: list[str],
-                          threshold: float = CORRELATION_THRESHOLD) -> None:
+                          threshold: float) -> None:
     """
     Create edges in graph, using the log_returns of the tickers in graph.
     Designed as a helper function to build_correlation_graph().
@@ -87,40 +86,65 @@ def create_edges_in_graph(graph: CorrelationGraph,
                 graph.add_edge(tickers[i], tickers[j], r)
 
 
-def build_correlation_graph(
-    tickers: set[str],
-    period: Optional[str] = None,
-    date_range: Optional[tuple[str, str]] = None,
-    interval: Optional[str] = None,
-    threshold: float = CORRELATION_THRESHOLD
-) -> CorrelationGraph:
-    """Build weighted undirected graph from price data.
+# def build_correlation_graph(
+#     tickers: set[str],
+#     period: Optional[str] = None,
+#     date_range: Optional[tuple[str, str]] = None,
+#     interval: Optional[str] = None,
+#     threshold: float
+# ) -> CorrelationGraph:
+#     """Build weighted undirected graph from price data.
+#
+#     Nodes = stocks (ticker, sector). Edges = pairs with |correlation| > threshold.
+#     Use Adj Close (or Close) for log returns, then Pearson correlation between pairs.
+#
+#     Preconditions:
+#     - All tickers in tickers are valid yfinance ticker symbols.
+#     - (period is None) != (date_range is None)
+#     - if date_range is not None, len(date_range) == 2, date_range[0] is the start date, date_range[1] is the end date
+#     - 0 <= threshold <= 1
+#     """
+#     g = CorrelationGraph()
+#     start, end = date_range if date_range else (None, None)
+#     df = download_tickers(tickers, period=period, start=start, end=end, interval=interval)
+#
+#     # -------------------- Add tickers as nodes in the graph
+#     for ticker, sector in get_sectors_for_tickers(tickers).items():  # Key-value pair is ticker: sector
+#         g.add_node(ticker, sector)
+#
+#     # -------------------- Add edges to graph if necessary
+#     # Calculating log returns for each ticker. This becomes a dictionary of {ticker: [log returns]}
+#     log_returns = log_return_list(df)
+#     # Calculate Pearson correlation coefficient between each vertex in the graph.
+#     # Then, add edges when the coefficient is above threshold.
+#     create_edges_in_graph(g, log_returns, g.get_all_tickers(), threshold)
+#
+#     return g
 
-    Nodes = stocks (ticker, sector). Edges = pairs with |correlation| > threshold.
-    Use Adj Close (or Close) for log returns, then Pearson correlation between pairs.
 
-    Preconditions:
-    - All tickers in tickers are valid yfinance ticker symbols.
-    - (period is None) != (date_range is None)
-    - if date_range is not None, len(date_range) == 2, date_range[0] is the start date, date_range[1] is the end date
-    - 0 <= threshold <= 1
-    """
-    g = CorrelationGraph()
+def build_correlation_graphs_for_thresholds(tickers: set[str],
+                                            thresholds: list[float],
+                                            period: Optional[str] = None,
+                                            date_range: Optional[tuple[str, str]] = None,
+                                            interval: Optional[str] = None) -> dict[float, CorrelationGraph]:
+
+    """build one correlation graph per threshold using a single downloaded dataset."""
+
     start, end = date_range if date_range else (None, None)
     df = download_tickers(tickers, period=period, start=start, end=end, interval=interval)
-
-    # -------------------- Add tickers as nodes in the graph
-    for ticker, sector in get_sectors_for_tickers(tickers).items():  # Key-value pair is ticker: sector
-        g.add_node(ticker, sector)
-
-    # -------------------- Add edges to graph if necessary
-    # Calculating log returns for each ticker. This becomes a dictionary of {ticker: [log returns]}
+    sector_for_tick = get_sectors_for_tickers(tickers)
     log_returns = log_return_list(df)
-    # Calculate Pearson correlation coefficient between each vertex in the graph.
-    # Then, add edges when the coefficient is above threshold.
-    create_edges_in_graph(g, log_returns, g.get_all_tickers(), threshold)
 
-    return g
+    graphs = {}
+    ordered_tickers = list(sector_for_tick.keys())
+    for threshold in thresholds:
+        graph = CorrelationGraph()
+        for ticker, sector in sector_for_tick.items():
+            graph.add_node(ticker, sector)
+        create_edges_in_graph(graph, log_returns, ordered_tickers, threshold)
+        graphs[threshold] = graph
+
+    return graphs
 
 
 if __name__ == '__main__':
