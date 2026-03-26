@@ -228,7 +228,7 @@ def traces_for_graph(cg: CorrelationGraph,
     # 1. edge traces (positive and negative)
     # 2. node traces (one per sector, or one total trace in fallback mode)
     graph = graph_to_networkx(cg)
-    return [*build_edge_traces(graph, positions), *build_node_traces(cg, positions, color_by_sector, threshold)]
+    return build_edge_traces(graph, positions) + build_node_traces(cg, positions, color_by_sector, threshold)
 
 
 def sector_to_color_map(sectors: list[str]) -> dict[str, str]:
@@ -262,7 +262,7 @@ def ordered_sectors(sectors: list[str]) -> list[str]:
     ordered = [sector for sector in SECTOR_ORDER if sector in present]
     # Any extra sector names not in SECTOR_ORDER are appended alphabetically.
     remaining = sorted(sector for sector in present if sector not in SECTOR_ORDER)
-    return [*ordered, *remaining]
+    return ordered + remaining
 
 
 def top_neighbour_stocks(cg: CorrelationGraph, limit: int = 5) -> list[tuple[str, int]]:
