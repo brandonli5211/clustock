@@ -5,6 +5,7 @@ Plotly-based interactive visualization of the correlation graph.
 
 from __future__ import annotations
 from correlation_graph import CorrelationGraph
+from constants import NODE_SIZE_MODE
 import plotly.graph_objects as go
 import networkx as nx
 
@@ -36,7 +37,6 @@ SECTOR_ORDER = [
     'Energy',
     'Basic Materials'
 ]
-
 
 def graph_to_networkx(cg: CorrelationGraph) -> nx.Graph:
     """Convert CorrelationGraph to NetworkX for layout algorithms."""
@@ -131,7 +131,8 @@ def build_edge_traces(graph: nx.Graph,
 
 def build_node_traces(cg: CorrelationGraph,
                       positions: dict[str, tuple[float, float]],
-                      color_by_sector: bool) -> list[go.Scatter]:
+                      color_by_sector: bool,
+                      threshold: float | None = None) -> list[go.Scatter]:
     """Return the Plotly node traces.
 
     When coloring by sector, each sector gets its own trace so legend toggles
@@ -143,6 +144,19 @@ def build_node_traces(cg: CorrelationGraph,
     sectors = [cg.get_sector(ticker) for ticker in tickers]
     degrees = [len(cg.get_neighbours(ticker)) for ticker in tickers]
     sector_to_color = sector_to_color_map(sectors)
+    max_degree = max(degrees) if degrees else 1
+
+    def _node_size(degree: int) -> float:
+        # Linear mode keeps node size tied directly to degree with a high cap.
+        if NODE_SIZE_MODE == 'linear':
+            return 12 + (min(degree, 100) ** 1.3) / 6
+        # Relative mode scales sizes against the current graph's largest degree,
+        # so dense low-threshold graphs stay controlled while sparse graphs
+        # still make their hubs stand out. The threshold also shrinks the
+        # relative-mode max size a bit as the graph gets sparser.
+        normalized = degree / max_degree if max_degree > 0 else 0
+        threshold_scale = 36 if threshold is None else (38 - 18 * threshold)
+        return 12 + threshold_scale * (normalized ** 2)
 
     if not color_by_sector:
         # Simpler fallback mode: all stocks in one trace, all the same color.
@@ -160,8 +174,7 @@ def build_node_traces(cg: CorrelationGraph,
             ],
             hoverinfo='text',
             marker=dict(
-                # Higher-degree stocks get larger nodes so hubs stand out visually.
-                size=[10 + min(degree * 1.2, 18) for degree in degrees],
+                size=[_node_size(degree) for degree in degrees],
                 color='#1f77b4',
                 line=dict(width=1, color='white')
             ),
@@ -196,7 +209,7 @@ def build_node_traces(cg: CorrelationGraph,
             ],
             hoverinfo='text',
             marker=dict(
-                size=[10 + min(degree * 1.2, 18) for degree in sector_degrees],
+                size=[_node_size(degree) for degree in sector_degrees],
                 color=sector_to_color[sector],
                 line=dict(width=1, color='white')
             ),
@@ -208,13 +221,14 @@ def build_node_traces(cg: CorrelationGraph,
 
 def traces_for_graph(cg: CorrelationGraph,
                      positions: dict[str, tuple[float, float]],
-                     color_by_sector: bool) -> list[go.Scatter]:
+                     color_by_sector: bool,
+                     threshold: float | None = None) -> list[go.Scatter]:
     """Return all traces needed to draw one graph."""
     # The figure is built from:
     # 1. edge traces (positive and negative)
     # 2. node traces (one per sector, or one total trace in fallback mode)
     graph = graph_to_networkx(cg)
-    return [*build_edge_traces(graph, positions), *build_node_traces(cg, positions, color_by_sector)]
+    return [*build_edge_traces(graph, positions), *build_node_traces(cg, positions, color_by_sector, threshold)]
 
 
 def sector_to_color_map(sectors: list[str]) -> dict[str, str]:
@@ -251,6 +265,47 @@ def ordered_sectors(sectors: list[str]) -> list[str]:
     return [*ordered, *remaining]
 
 
+def top_neighbour_stocks(cg: CorrelationGraph, limit: int = 5) -> list[tuple[str, int]]:
+    """Return the top stocks by neighbour count, excluding zero-neighbour stocks."""
+    counts = []
+    for ticker in cg.get_all_tickers():
+        neighbour_count = len(cg.get_neighbours(ticker))
+        if neighbour_count > 0:
+            counts.append((ticker, neighbour_count))
+    counts.sort(key=lambda pair: (-pair[1], pair[0]))
+    return counts[:limit]
+
+
+def side_panel_annotation(cg: CorrelationGraph) -> dict:
+    """Return a Plotly annotation listing the top neighbour stocks for this graph."""
+    top_stocks = top_neighbour_stocks(cg)
+    sector_colors = sector_to_color_map([cg.get_sector(ticker) for ticker in cg.get_all_tickers()])
+    if top_stocks:
+        lines = ['Most connections:']
+        for index, (ticker, count) in enumerate(top_stocks, start=1):
+            sector = cg.get_sector(ticker)
+            color = sector_colors.get(sector, '#333333')
+            lines.append(f'{index}. {ticker} ({count}) <span style="color:{color}">&#9679;</span>')
+    else:
+        lines = ['Most connections:', 'No connected stocks']
+
+    return {
+        'x': 1.02,
+        'y': 0.72,
+        'xref': 'paper',
+        'yref': 'paper',
+        'xanchor': 'left',
+        'yanchor': 'top',
+        'align': 'left',
+        'showarrow': False,
+        'bordercolor': '#C9D4E6',
+        'borderwidth': 1,
+        'borderpad': 8,
+        'bgcolor': 'rgba(255, 255, 255, 0.78)',
+        'text': '<br>'.join(lines)
+    }
+
+
 def create_interactive_graph(
     graphs_by_threshold: dict[float, CorrelationGraph],
     color_by_sector: bool = True,
@@ -272,8 +327,11 @@ def create_interactive_graph(
         # and different node sizes for that threshold.
         frames.append(go.Frame(
             name=f'{threshold:.1f}',
-            data=traces_for_graph(graph, positions, color_by_sector),
-            layout=go.Layout(title=f'{title} (threshold = {threshold:.1f})')
+            data=traces_for_graph(graph, positions, color_by_sector, threshold),
+            layout=go.Layout(
+                title=f'{title} (threshold = {threshold:.1f})',
+                annotations=[side_panel_annotation(graph)]
+            )
         ))
 
     # Initial figure is the first threshold frame. The slider then switches between
@@ -285,9 +343,10 @@ def create_interactive_graph(
             showlegend=True,
             hovermode='closest',
             # Extra bottom margin leaves room for the slider.
-            margin=dict(b=80, l=20, r=20, t=40),
+            margin=dict(b=80, l=20, r=180, t=40),
             # Move the legend to the right so it behaves like a colour key.
             legend=dict(x=1.02, y=1, xanchor='left', yanchor='top'),
+            annotations=[side_panel_annotation(reference_graph)],
             # Hide axis lines/ticks because this is a network diagram, not an x-y chart.
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
