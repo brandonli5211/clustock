@@ -1,6 +1,6 @@
 """CSC111 Winter 2026 - Project 2: Clustock
 
-Constants: tickers, periods, correlation threshold, BFS depth.
+Constants: tickers, periods, BFS depth, and visualization settings.
 """
 
 # S&P 100  tickers (as of 2024-2025)
@@ -28,3 +28,9 @@ VOLATILE_PERIOD = '4mo'
 
 # BFS depth for crash simulation (degrees of separation)
 BFS_DEPTH = 2
+
+# Node size mode for visualization:
+# - 'linear' keeps size tied directly to degree
+# - 'relative' scales size relative to the largest degree in the current graph
+NODE_SIZE_MODE = 'relative'
+
