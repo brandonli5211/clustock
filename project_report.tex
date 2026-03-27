@@ -1,0 +1,46 @@
+\documentclass[fontsize=11pt]{article}
+\usepackage{amsmath}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+\title{\textbf{CSC111 Project Proposal: The Stock Market Correlation Network}}
+\author{Tyler Christopher Lin, Brandon Zento Li, Houssam Kadri, Frank Huang}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{1. Problem Statement}
+
+The prediction of the stock market remains one of the most persistent challenges in quantitative finance. Traditional financial analysis relies heavily on the Global Industry Classification Standard (GICS), a hierarchical framework classifying over 43,000 publicly traded companies into 11 broad sectors such as "Technology" and "Energy."\\
+The GICS, however, rests on the assumption that companies within the same category exhibit similar price behaviors, while companies across categories behave differently. In practice, stock market value is driven by geopolitical and socioeconomic events, making consistently reliable predictions exceptionally difficult. A single major economic event can simultaneously affect multiple, seemingly unrelated industries through higher-order dependencies.\\
+\textbf{Our question:} \textbf{To what extent do traditional GICS sectors remain mathematically distinct to one another during periods of high market volatility, and can graph-based detection identify 'pivot stocks' that supposedly connect unrelated industries?}
+...\\\\
+This project's dataset is a subset of Yahoo's financial data. In particular, the graph calculated the correlation between the SP100 companies. When the ticker data is downloaded, it returns in the form of a \texttt{pandas.DataFrame} object. (DESCRIBE HOW THE DATAFRAME LOOKS IM FORGETTING ATM - WE ONLY USE THE NAME, SECTOR, AND ADJ CLOSE PRICE FROM THE DATA)
+
+\section*{Computational Overview}
+As outlined in Section 1, we retrieve stock price data from the Yahoo Finance Python API, \texttt{yfinance}. With each ticker represented as a node in a graph, edges are formed based on the correlation between two nodes' price trends. If the strength of the correlation exceeds a user-specified threshold, an edge is formed between them. This forms an undirected weighted graph, which is central in analyzing price behaviors across sectors, such as whether an economic event affecting one sector propagates to another.\\
+
+To construct a graph, the historical price data of the user-specified set of tickers is first downloaded with two additional user-specified parameters: either a start and end date or a time period, and the sampling frequency. Once downloaded, the resulting \texttt{pandas.DataFrame} is then restructured so that the \texttt{DataFrame} can be indexed by ticker and date. We then call \texttt{get\_sectors\_for\_tickers()} with the ticker set to retrieve the sector of each company, and calculate the log returns, the natural logarithm of the ratio of consecutive stock prices, by calling \texttt{log\_return\_list()} with our DataFrame. Doing so produces one dictionary with the ticker names and corresponding GICS sectors, and another dictionary which pairs tickers to their respective list of log returns. We then add each node, which has attributes \texttt{ticker}, \texttt{sector}, and \texttt{neighbours}, into a \texttt{CorrelationGraph} object, forming the underlying graph structure. Edges are added by computing the Pearson Correlation Coefficient between each pair of nodes using their lists of log returns. The value is then compared to a user-specified threshold. An edge is added between two nodes if the absolute value of the Pearson coefficient is greater than the threshold to identify sufficiently strong positive and negative correlations.
+
+
+\section*{Running the Program}
+
+
+
+\section*{Changes from Proposal}
+
+
+
+\section*{Discussion}
+
+
+
+\section*{References}
+
+
+
+\end{document}
