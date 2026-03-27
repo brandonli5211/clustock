@@ -5,7 +5,7 @@
 \usepackage{hyperref}
 \usepackage{booktabs}
 
-\title{\textbf{CSC111 Project Proposal: The Stock Market Correlation Network}}
+\title{\textbf{TODO: MAKE TITLE}}
 \author{Tyler Christopher Lin, Brandon Zento Li, Houssam Kadri, Frank Huang}
 \date{\today}
 
@@ -24,23 +24,34 @@ This project's dataset is a subset of Yahoo's financial data. In particular, the
 \section*{Computational Overview}
 As outlined in Section 1, we retrieve stock price data from the Yahoo Finance Python API, \texttt{yfinance}. With each ticker represented as a node in a graph, edges are formed based on the correlation between two nodes' price trends. If the strength of the correlation exceeds a user-specified threshold, an edge is formed between them. This forms an undirected weighted graph, which is central in analyzing price behaviors across sectors, such as whether an economic event affecting one sector propagates to another.\\
 
-To construct a graph, the historical price data of the user-specified set of tickers is first downloaded with two additional user-specified parameters: either a start and end date or a time period, and the sampling frequency. Once downloaded, the resulting \texttt{pandas.DataFrame} is then restructured so that the \texttt{DataFrame} can be indexed by ticker and date. We then call \texttt{get\_sectors\_for\_tickers()} with the ticker set to retrieve the sector of each company, and calculate the log returns, the natural logarithm of the ratio of consecutive stock prices, by calling \texttt{log\_return\_list()} with our DataFrame. Doing so produces one dictionary with the ticker names and corresponding GICS sectors, and another dictionary which pairs tickers to their respective list of log returns. We then add each node, which has attributes \texttt{ticker}, \texttt{sector}, and \texttt{neighbours}, into a \texttt{CorrelationGraph} object, forming the underlying graph structure. Edges are added by computing the Pearson Correlation Coefficient between each pair of nodes using their lists of log returns. The value is then compared to a user-specified threshold. An edge is added between two nodes if the absolute value of the Pearson coefficient is greater than the threshold to identify sufficiently strong positive and negative correlations.
+The overall computation pipeline accepts a user-specified list of thresholds, resulting in a graph being constructed for each threshold. However, the underlying price data is downloaded only once.\\
+To construct a graph, the historical price data of the user-specified set of tickers is first downloaded with two additional user-specified parameters: either a start and end date or a time period, and the sampling frequency. Once downloaded, the resulting \texttt{pandas.DataFrame} is then restructured so that the \texttt{DataFrame} can be indexed by ticker and date. We then call \texttt{get\_sectors\_for\_tickers()} with the ticker set to retrieve the sector of each company, and calculate the log returns, the natural logarithm of the ratio of consecutive stock prices, by calling \texttt{log\_return\_list()} with our DataFrame. Doing so produces one dictionary with the ticker names and corresponding GICS sectors, and another dictionary which pairs tickers to their respective list of log returns. We then add each node, which has attributes \texttt{ticker}, \texttt{sector}, and \texttt{neighbours}, into a \texttt{CorrelationGraph} object, forming the underlying graph structure. Edges are added by computing the Pearson Correlation Coefficient between each pair of nodes using their lists of log returns. The value is then compared to a user-specified threshold. An edge is added between two nodes if the absolute value of the Pearson coefficient is greater than the threshold to identify sufficiently strong positive and negative correlations.\\\\
+
+The module used for data retrieval is \texttt{yfinance-cache}, an unofficial caching wrapper of \texttt{yfinance} designed to prevent rate-limiting by the Yahoo Finance API by caching previously retrieved data locally. Data is retrieved by calling the \texttt{yfinance\_cache.download()} function. A \texttt{yfinance\_cache.Ticker} object, instantiated with a ticker symbol, contains all available information for that stock. Calling \texttt{Ticker.info.get('sector', 'Unknown')} returns the sector of each ticker.\\
+The module used for data storage and manipulation is \texttt{pandas}, a library providing high-performance data structures and tools to manipulate tabular data. Data retrieved from  \texttt{yfinance\_cache.download()} is returned as a \texttt{pandas.DataFrame} object. The \texttt{DataFrame} is then flattened from a multi-level column format to a row-wise format indexed by date and ticker by calling \texttt{DataFrame.stack()} and \texttt{DataFrame.reset\_index()}. This format allows direct access to the close prices per ticker and date from which log returns are calculated.
+
+
+\section*{Visualization Overview}
+TODO: Explain how the visualization works, as well as the libraries involved to accomplish the visualization.
 
 
 \section*{Running the Program}
-
+The provided file \texttt{requirements.txt} provides all the required modules to run the program. Note that when installing \texttt{yfinance-cache}, an underscore must be used instead of a hyphen, i.e.\texttt{pip install yfinance\_cache}.
 
 
 \section*{Changes from Proposal}
-
+- Implemented clusters in visualization\\
+- Node size changes based on number of correlations\\
+- r threshold can be modified - input a list of thresholds + a slider to look through each one\\
 
 
 \section*{Discussion}
-
+This project set out to determine whether or not GICS-defined sectors accurately reflect the behavior of stocks measured by price correlation. To investigate, a correlation graph was constructed with the SP100 as the ticker set, with one month of historical prices retrieved at daily intervals.\\
+TODO: Continue this cuz i lowkey can't think rn
 
 
 \section*{References}
-
+TODO
 
 
 \end{document}
