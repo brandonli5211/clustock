@@ -8,6 +8,7 @@ from correlation_graph import CorrelationGraph
 from constants import NODE_SIZE_MODE
 import plotly.graph_objects as go
 import networkx as nx
+from config import CONFIG
 
 
 SECTOR_COLORS = {
@@ -373,7 +374,7 @@ def create_interactive_graph(
 def run_visualization(graphs_by_threshold: dict[float, CorrelationGraph]) -> None:
     """Open a threshold-slider visualization."""
     fig = create_interactive_graph(graphs_by_threshold)
-    fig.show()
+    fig.show(config=CONFIG)
 
 
 if __name__ == '__main__':
