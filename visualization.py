@@ -291,8 +291,8 @@ def side_panel_annotation(cg: CorrelationGraph) -> dict:
         lines = ['Most connections:', 'No connected stocks']
 
     return {
-        'x': 1.02,
-        'y': 0.72,
+        'x': 0,
+        'y': 0.1,
         'xref': 'paper',
         'yref': 'paper',
         'xanchor': 'left',
@@ -310,7 +310,8 @@ def side_panel_annotation(cg: CorrelationGraph) -> dict:
 def create_interactive_graph(
     graphs_by_threshold: dict[float, CorrelationGraph],
     color_by_sector: bool = True,
-    title: str = 'Stock Correlation Network by Threshold'
+    title: str = 'Stock Correlation Network by Threshold',
+    start_threshold: int = 0
 ) -> go.Figure:
     """Create interactive Plotly figure with hover info, color coding, a threshold slider, and a color key."""
 
@@ -338,12 +339,13 @@ def create_interactive_graph(
     # Initial figure is the first threshold frame. The slider then switches between
     # the other precomputed frames with zero-duration transitions.
     fig = go.Figure(
-        data=frames[0].data,
+        data=frames[start_threshold].data,
         layout=go.Layout(
             title=f'{title} (threshold = {thresholds[0]:.1f})',
             showlegend=True,
             hovermode='closest',
             # Extra bottom margin leaves room for the slider.
+            # margin=dict(b=80, l=20, r=180, t=40),
             margin=dict(b=80, l=20, r=180, t=40),
             # Move the legend to the right so it behaves like a colour key.
             legend=dict(x=1.02, y=1, xanchor='left', yanchor='top'),
@@ -352,19 +354,19 @@ def create_interactive_graph(
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             # The slider swaps between precomputed frames 0.1 ... 0.9.
-            sliders=[{
-                'active': 0,
-                'currentvalue': {'prefix': 'Threshold: '},
-                'pad': {'t': 20},
-                'steps': [{
-                    'label': f'{threshold:.1f}',
-                    'method': 'animate',
-                    'args': [[f'{threshold:.1f}'],
-                             {'frame': {'duration': 0, 'redraw': True},
-                              'mode': 'immediate',
-                              'transition': {'duration': 0}}]
-                } for threshold in thresholds]
-            }]
+            # sliders=[{
+            #     'active': 0,
+            #     'currentvalue': {'prefix': 'Threshold: '},
+            #     'pad': {'t': 20},
+            #     'steps': [{
+            #         'label': f'{threshold:.1f}',
+            #         'method': 'animate',
+            #         'args': [[f'{threshold:.1f}'],
+            #                  {'frame': {'duration': 0, 'redraw': True},
+            #                   'mode': 'immediate',
+            #                   'transition': {'duration': 0}}]
+            #     } for threshold in thresholds]
+            # }]
         ),
         frames=frames
     )
@@ -375,7 +377,6 @@ def run_visualization(graphs_by_threshold: dict[float, CorrelationGraph]) -> Non
     """Open a threshold-slider visualization."""
     fig = create_interactive_graph(graphs_by_threshold)
     fig.show(config=CONFIG)
-
 
 if __name__ == '__main__':
     import doctest
