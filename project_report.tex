@@ -4,6 +4,8 @@
 \usepackage[margin=0.75in]{geometry}
 \usepackage{hyperref}
 \usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{float}
 
 \title{\textbf{TODO: MAKE TITLE}}
 \author{Tyler Christopher Lin, Brandon Zento Li, Houssam Kadri, Frank Huang}
@@ -18,7 +20,8 @@
 The prediction of the stock market remains one of the most persistent challenges in quantitative finance. Traditional financial analysis relies heavily on the Global Industry Classification Standard (GICS), a hierarchical framework classifying over 43,000 publicly traded companies into 11 broad sectors such as "Technology" and "Energy."\\
 The GICS, however, rests on the assumption that companies within the same category exhibit similar price behaviors, while companies across categories behave differently. In practice, stock market value is driven by geopolitical and socioeconomic events, making consistently reliable predictions exceptionally difficult. A single major economic event can simultaneously affect multiple, seemingly unrelated industries through higher-order dependencies.\\
 \textbf{Our question:} \textbf{To what extent do traditional GICS sectors remain mathematically distinct to one another during periods of high market volatility, and can graph-based detection identify 'pivot stocks' that supposedly connect unrelated industries?}
-...\\\\
+
+\subsection*{Dataset(s) Used}
 This project's dataset is a subset of Yahoo's financial data. In particular, the graph calculated the correlation between the SP100 companies. When the ticker data is downloaded, it returns in the form of a \texttt{pandas.DataFrame} object. (DESCRIBE HOW THE DATAFRAME LOOKS IM FORGETTING ATM - WE ONLY USE THE NAME, SECTOR, AND ADJ CLOSE PRICE FROM THE DATA)
 
 \section*{Computational Overview}
@@ -36,18 +39,45 @@ TODO: Explain how the visualization works, as well as the libraries involved to 
 
 
 \section*{Running the Program}
-The provided file \texttt{requirements.txt} provides all the required modules to run the program. Note that when installing \texttt{yfinance-cache}, an underscore must be used instead of a hyphen, i.e.\texttt{pip install yfinance\_cache}.
-
-
+The provided file \texttt{requirements.txt} provides all the required modules to run the program. Note that when installing \texttt{yfinance-cache}, an underscore must be used instead of a hyphen, i.e.\texttt{pip install yfinance\_cache}.\\
+\textbf{(WE WILL PROVIDE A ZIP FILE ON MARKUS/SENDUTORONTO/UOFT ONEDRIVE)}\\
+When \texttt{main.py} is run, you may notice that the result will return slowly, which is due to the nature of \texttt{yfinance.download()}. With a larger sample, it will take some time to download each ticker's data before creating the graph.\\
+The following shows something similar to the initial appearance of the graph. Hovering the mouse over a node shows the node's ticker, GICS sector, and the number of neighbors. On the right hand side of the screen is a legend, as well as a ranking of the nodes with the most amount of connections. The larger a node, the more neighbors it has. In this mode, nodes are clustered by the number of correlations with other nodes. 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{image.png}
+    \caption{Enter Caption}
+    \label{fig:placeholder}
+\end{figure}
+Using the slider at the bottom of the screen will show only the edges whose absolute values exceed the threshold.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{image2.png}
+    \caption{Stock Network Correlation Graph - 0.7 Threshold}
+    \label{fig:placeholder}
+\end{figure}
+On the top right corner of the site, there is the Plotly Modebar:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{image3.png}
+    \caption{The Plotly Modebar, circled in red, is used for navigation.}
+    \label{fig:placeholder}
+\end{figure}
+With it, you can zoom in and out and pan around the graph, along with a few other actions.
 \section*{Changes from Proposal}
-- Implemented clusters in visualization\\
-- Node size changes based on number of correlations\\
-- r threshold can be modified - input a list of thresholds + a slider to look through each one\\
-
+A few changes were made from our original proposal: 
+\begin{itemize}
+    \item Implementing a mode that switches clustering in the graph from the number of edges to grouping the nodes by sector. This was inspired by our TA and provides a different perspective in the analysis.
+    \item A slider in the visualization that changes the correlation threshold, influencing the results. This change was also inspired by our TA and made narrowing down very strong correlations very easy without running the program multiple times.
+    \item Changing the size of a node based on the number of correlations. This way, the graph felt more dynamic and it was easier to pinpoint "important" nodes within the network.
+\end{itemize}
 
 \section*{Discussion}
 This project set out to determine whether or not GICS-defined sectors accurately reflect the behavior of stocks measured by price correlation. To investigate, a correlation graph was constructed with the SP100 as the ticker set, with one month of historical prices retrieved at daily intervals.\\
-TODO: Continue this cuz i lowkey can't think rn
+NEXT:\\
+- Results were good - able to do so with the slider and finding strong correlations via higher thresholds\\
+- limitations - runtime, relatively small interval\\
+- further steps: larger interval, more stocks
 
 
 \section*{References}
