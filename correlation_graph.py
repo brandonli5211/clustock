@@ -111,33 +111,30 @@ class CorrelationGraph:
 
         return nodes_at_depths
 
+    def _reachable_from_crash(self, start_ticker: str) -> set[str]:
+        """All tickers within BFS_DEPTH hops of start_ticker along correlation edges."""
+        layers = self.bfs_crash_simulation(start_ticker)
+        return {ticker for stocks in layers.values() for ticker in stocks}
+
     def get_pivot_candidates(self, start_ticker: str) -> list[tuple[str, int]]:
-        """Stocks that connect multiple sectors within BFS reach.
-        Returns list of (ticker, sector_count) sorted by sector_count desc.
+        """ Returns:
+            List of ``(ticker, sector_diversity)`` where ``sector_diversity`` is
+            the number of distinct sectors among {this stock} ∪ {reached neighbours},
+            only including stocks with diversity ≥ 2. Sorted with highest diversity first.
         """
-        bfs_result = self.bfs_crash_simulation(start_ticker)
-        # Collect all tickers reachable from start (union of all depths).
-        # Same as: reached = reached | tickers_at_depth. We loop instead.
-        reached: set[str] = set()
-        for tickers_at_depth in bfs_result.values():
-            for ticker in tickers_at_depth:
-                reached.add(ticker)
-        # For each reached ticker, count how many sectors it touches
-        # (its own sector + sectors of neighbours that are also in reached).
-        pivots: list[tuple[str, int]] = []
-        for ticker in reached:
-            sectors_touched = {self._vertices[ticker].sector}
+        reachable = self._reachable_from_crash(start_ticker)
+
+        candidates: list[tuple[str, int]] = []
+        for ticker in reachable:
+            sectors_here = {self._vertices[ticker].sector}
             for neighbour in self._vertices[ticker].neighbours:
-                if neighbour in reached:
-                    sectors_touched.add(self._vertices[neighbour].sector)
-            if len(sectors_touched) > 1:
-                pivots.append((ticker, len(sectors_touched)))
-        # Sort by sector_count descending. The key=lambda gives the
-        # sort value: -p[1] means "use negative of sector count" so higher
-        # counts appear first (e.g. -3 < -2, so 3 sorts before 2).
-        def _sector_count_desc(pair: tuple[str, int]) -> int:
-            return -pair[1]
-        return sorted(pivots, key=_sector_count_desc)
+                if neighbour in reachable:
+                    sectors_here.add(self._vertices[neighbour].sector)
+            if len(sectors_here) > 1:
+                candidates.append((ticker, len(sectors_here)))
+
+        # Highest sector_diversity first (sort by the integer, largest first).
+        return sorted(candidates, key=lambda pair: pair[1], reverse=True)
 
 
 if __name__ == '__main__':
