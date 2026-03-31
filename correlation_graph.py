@@ -112,7 +112,10 @@ class CorrelationGraph:
         return nodes_at_depths
 
     def _reachable_from_crash(self, start_ticker: str) -> set[str]:
-        """All tickers within BFS_DEPTH hops of start_ticker along correlation edges."""
+        """All tickers within BFS_DEPTH hops of start_ticker along correlation edges.
+
+        Union of every BFS layer returned by bfs_crash_simulation(start_ticker).
+        """
         layers = self.bfs_crash_simulation(start_ticker)
         return {ticker for stocks in layers.values() for ticker in stocks}
 
