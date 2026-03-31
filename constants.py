@@ -33,4 +33,3 @@ BFS_DEPTH = 2
 # - 'linear' keeps size tied directly to degree
 # - 'relative' scales size relative to the largest degree in the current graph
 NODE_SIZE_MODE = 'relative'
-
