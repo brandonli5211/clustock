@@ -6,7 +6,8 @@ Entry point: download prices, build the correlation graph, open the interactive 
 from __future__ import annotations
 
 from compute import build_correlation_graphs_for_thresholds
-from visualization import create_graph_figure, get_positions, top_neighbour_stocks
+from visualization import create_graph_figure, get_positions, top_neighbour_stocks, get_sector_oriented_positions, \
+    get_community_positions
 from constants import SP100_TICKERS
 from config import CONFIG
 
@@ -66,14 +67,32 @@ def run_full_pipeline(use_sample: bool = True) -> None:
     thresholds = [x / 10 for x in range(1,11)]
     graphs_by_threshold = build_correlation_graphs_for_thresholds(tickers,thresholds, period='1mo', interval='1d')
     positions = get_positions(graphs_by_threshold[thresholds[0]])
-    figures_by_threshold = {}
+    sector_oriented_positions = get_sector_oriented_positions(graphs_by_threshold[thresholds[0]])
+    communinity_positions = get_community_positions(graphs_by_threshold[thresholds[0]])
+    figures_by_threshold = {
+        'Standard': {},
+        'Sector': {},
+        'Community': {}
+    }
 
     for threshold in thresholds:
         graph = graphs_by_threshold[threshold]
         positive_edges, negative_edges = edge_sign_counts(graph)
-        figures_by_threshold[threshold] = create_graph_figure(
+        figures_by_threshold['Standard'][threshold] = create_graph_figure(
             graph,
             positions,
+            threshold,
+            show_side_annotation=False
+        )
+        figures_by_threshold['Sector'][threshold] = create_graph_figure(
+            graph,
+            sector_oriented_positions,
+            threshold,
+            show_side_annotation=False
+        )
+        figures_by_threshold['Community'][threshold] = create_graph_figure(
+            graph,
+            communinity_positions,
             threshold,
             show_side_annotation=False
         )
@@ -91,7 +110,7 @@ def run_full_pipeline(use_sample: bool = True) -> None:
     app.title = "Clustock"
 
     default_threshold = 0.7
-    visualization_figure = figures_by_threshold[default_threshold]
+    visualization_figure = figures_by_threshold['Standard'][default_threshold]
     app.layout = html.Div([
         html.Div([
             dcc.Graph(
@@ -116,6 +135,26 @@ def run_full_pipeline(use_sample: bool = True) -> None:
                 }
             ),
             html.Div([
+                html.Div("View Options", style={'fontWeight': '600', 'marginBottom': '8px'}),
+                dcc.RadioItems(
+                    ['Standard', 'Sector', 'Community'],
+                    'Standard',
+                    id="view-menu"
+                )
+            ], style={
+                'position': 'absolute',
+                'top': '270px',
+                'right': '30px',
+                'width': '180px',
+                'padding': '20px',
+                'boxSizing': 'border-box',
+                'backgroundColor': 'rgba(255, 255, 255, 0.88)',
+                'border': '1px solid #C9D4E6',
+                'fontFamily': '"Open Sans", verdana, arial, sans-serif',
+                'fontSize': '12px',
+                'color': '#2a3f5f'
+            }),
+            html.Div([
                 html.Div("Pivot Candidates", style={'fontWeight': '600', 'marginBottom': '8px'}),
                 dcc.Dropdown(
                     id="pivot_start_ticker",
@@ -135,10 +174,10 @@ def run_full_pipeline(use_sample: bool = True) -> None:
                 html.Div(
                     id="most-connections-output",
                     children=most_connections_panel(graphs_by_threshold[default_threshold])
-                )
+                ),
             ], style={
                 'position': 'absolute',
-                'top': '370px',
+                'top': '400px',
                 'right': '30px',
                 'width': '180px',
                 'padding': '20px',
@@ -171,7 +210,7 @@ def run_full_pipeline(use_sample: bool = True) -> None:
                 }
                 for x in range(1, 11)
             }
-        )
+        ),
     ])
 
     # Input Handling
@@ -179,8 +218,9 @@ def run_full_pipeline(use_sample: bool = True) -> None:
         Output('graph', 'figure'),
         Output('most-connections-output', 'children'),
         Input('threshold-slider', 'value'),
-        Input('pivot_start_ticker', 'value'))
-    def update_figure(selected_threshold, start_ticker):
+        Input('pivot_start_ticker', 'value'),
+        Input('view-menu', 'value'))
+    def update_figure(selected_threshold, start_ticker, view_option):
         "Returns figure after handling the input"
         selected_threshold = round(selected_threshold, 1)
         graph = graphs_by_threshold[selected_threshold]
@@ -188,16 +228,36 @@ def run_full_pipeline(use_sample: bool = True) -> None:
         if start_ticker in SP100_TICKERS:
             pivots = graph.get_pivot_candidates(start_ticker)
             pivot_tickers = {pivot[0] for pivot in pivots}
-            fig = create_graph_figure(
-                graph,
-                positions,
-                selected_threshold,
-                show_side_annotation=False,
-                start_ticker=start_ticker,
-                pivot_tickers=pivot_tickers
-            )
+
+            if view_option == "Sector":
+                fig = create_graph_figure(
+                    graph,
+                    sector_oriented_positions,
+                    selected_threshold,
+                    show_side_annotation=False,
+                    start_ticker=start_ticker,
+                    pivot_tickers=pivot_tickers
+                )
+            elif view_option == "Community":
+                fig = create_graph_figure(
+                    graph,
+                    communinity_positions,
+                    selected_threshold,
+                    show_side_annotation=False,
+                    start_ticker=start_ticker,
+                    pivot_tickers=pivot_tickers
+                )
+            else:
+                fig = create_graph_figure(
+                    graph,
+                    positions,
+                    selected_threshold,
+                    show_side_annotation=False,
+                    start_ticker=start_ticker,
+                    pivot_tickers=pivot_tickers
+                )
         else:
-            fig = figures_by_threshold[selected_threshold]
+            fig = figures_by_threshold[view_option][selected_threshold]
 
         return fig, most_connections_panel(graph)
 

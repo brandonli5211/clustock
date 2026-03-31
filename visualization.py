@@ -4,6 +4,11 @@ Plotly-based interactive visualization of the correlation graph.
 """
 
 from __future__ import annotations
+
+from typing import Any, Hashable
+
+from numpy import dtype, float64, ndarray
+
 from correlation_graph import CorrelationGraph
 from constants import NODE_SIZE_MODE
 import plotly.graph_objects as go
@@ -38,8 +43,6 @@ SECTOR_ORDER = [
     'Basic Materials'
 ]
 
-
-
 def graph_to_networkx(cg: CorrelationGraph) -> nx.Graph:
     """Convert CorrelationGraph to NetworkX for layout algorithms."""
     # Our project graph stores the stock network in a custom structure.
@@ -66,6 +69,59 @@ def get_positions(cg: CorrelationGraph) -> dict[str, tuple[float, float]]:
     # nodes push apart. That gives us a cluster-like network picture automatically.
     return nx.spring_layout(graph, seed=42)
 
+
+def get_sector_oriented_positions(cg: CorrelationGraph) -> dict[str,tuple[float, float]]:
+    """Return node positions for a graph with nodes of the same sector clustered together
+    Taken from https://networkx.org/documentation/stable/auto_examples/drawing/plot_clusters.html
+    """
+    graph = graph_to_networkx(cg)
+
+    supergraph = nx.cycle_graph(len(SECTOR_ORDER))
+    superpos = nx.spring_layout(supergraph, scale=2, seed=429)
+
+    # Supernodes are used as centers for the new node clusters
+    centers = list(superpos.values())
+    pos = {}
+
+    nodes_by_sector = {}
+    for sector in SECTOR_ORDER:
+        nodes_by_sector[sector] = []
+
+    for ticker in cg.get_all_tickers():
+        nodes_by_sector[cg.get_sector(ticker)].append(ticker)
+
+    for center, sector in zip(centers, SECTOR_ORDER):
+        pos.update(nx.spring_layout(nx.subgraph(graph, frozenset(nodes_by_sector[sector])), center=center, seed=1430))
+        print(center, sector)
+
+    print(pos)
+    return pos
+
+
+def get_community_positions(cg: CorrelationGraph) -> dict[str,tuple[float, float]]:
+    """Return node positions for a graph with nodes of the same communities as calculated by greedy modularity
+    Taken from https://networkx.org/documentation/stable/auto_examples/drawing/plot_clusters.html
+    """
+    graph = graph_to_networkx(cg)
+    communities = nx.community.greedy_modularity_communities(graph, cutoff=len(SECTOR_ORDER), best_n=len(SECTOR_ORDER))
+
+    # Compute positions for the node clusters as if they were themselves nodes in a
+    # supergraph using a larger scale factor
+    supergraph = nx.cycle_graph(len(communities))
+    superpos = nx.spring_layout(supergraph, scale=2, seed=429)
+
+    # Use the "supernode" positions as the center of each node cluster
+    centers = list(superpos.values())
+    pos = {}
+    for center, comm in zip(centers, communities):
+        pos.update(nx.spring_layout(nx.subgraph(graph, comm), center=center, seed=1430))
+
+    # Nodes colored by cluster
+    # for nodes, clr in zip(communities, ("tab:blue", "tab:orange", "tab:green")):
+    #     nx.draw_networkx_nodes(G, pos=pos, nodelist=nodes, node_color=clr, node_size=100)
+    # nx.draw_networkx_edges(G, pos=pos)
+
+    return pos
 
 def build_edge_traces(graph: nx.Graph,
                       positions: dict[str, tuple[float, float]]) -> list[go.Scatter]:
@@ -391,7 +447,8 @@ def create_interactive_graph(
         color_by_sector: bool = True,
         title: str = 'Stock Correlation Network by Threshold',
         start_threshold: int = 0,
-        show_side_annotation: bool = True
+        show_side_annotation: bool = True,
+        group_by_sector: bool = False
 ) -> go.Figure:
     """Create interactive Plotly figure with hover info, color coding, a threshold slider, and a color key."""
 
@@ -400,7 +457,11 @@ def create_interactive_graph(
     reference_graph = graphs_by_threshold[thresholds[0]]
     # Keep one shared layout between thresholds so this is comparing
     # same stocks, and different edge cutoffs to keep node in same position
-    positions = get_positions(reference_graph)
+
+    if group_by_sector:
+        positions = get_sector_oriented_positions(reference_graph)
+    else:
+        positions = get_positions(reference_graph)
 
     frames = []
     for threshold in thresholds:
