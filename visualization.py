@@ -10,7 +10,6 @@ import plotly.graph_objects as go
 import networkx as nx
 from config import CONFIG
 
-
 SECTOR_COLORS = {
     'Consumer Cyclical': '#FF7A45',
     'Utilities': '#FFC247',
@@ -38,6 +37,8 @@ SECTOR_ORDER = [
     'Energy',
     'Basic Materials'
 ]
+
+
 
 def graph_to_networkx(cg: CorrelationGraph) -> nx.Graph:
     """Convert CorrelationGraph to NetworkX for layout algorithms."""
@@ -133,7 +134,9 @@ def build_edge_traces(graph: nx.Graph,
 def build_node_traces(cg: CorrelationGraph,
                       positions: dict[str, tuple[float, float]],
                       color_by_sector: bool,
-                      threshold: float | None = None) -> list[go.Scatter]:
+                      threshold: float | None = None,
+                      start_ticker: str | None = None,
+                      pivot_tickers: set[str] | None = None) -> list[go.Scatter]:
     """Return the Plotly node traces.
 
     When coloring by sector, each sector gets its own trace so legend toggles
@@ -146,6 +149,8 @@ def build_node_traces(cg: CorrelationGraph,
     degrees = [len(cg.get_neighbours(ticker)) for ticker in tickers]
     sector_to_color = sector_to_color_map(sectors)
     max_degree = max(degrees) if degrees else 1
+    if pivot_tickers is None:
+        pivot_tickers = set()
 
     def _node_size(degree: int) -> float:
         # Linear mode keeps node size tied directly to degree with a high cap.
@@ -159,8 +164,78 @@ def build_node_traces(cg: CorrelationGraph,
         threshold_scale = 36 if threshold is None else (38 - 18 * threshold)
         return 12 + threshold_scale * (normalized ** 2)
 
+    if start_ticker is not None:
+        other_tickers = [ticker for ticker in tickers if ticker != start_ticker and ticker not in pivot_tickers]
+        other_degrees = [len(cg.get_neighbours(ticker)) for ticker in other_tickers]
+        pivot_list = [ticker for ticker in tickers if ticker in pivot_tickers and ticker != start_ticker]
+        pivot_degrees = [len(cg.get_neighbours(ticker)) for ticker in pivot_list]
+
+        traces = [go.Scatter(
+            x=[positions[ticker][0] for ticker in other_tickers],
+            y=[positions[ticker][1] for ticker in other_tickers],
+            mode='markers+text',
+            text=other_tickers,
+            textposition='top center',
+            hovertext=[
+                f'{ticker}<br>Sector: {cg.get_sector(ticker)}<br>Neighbours: {len(cg.get_neighbours(ticker))}'
+                for ticker in other_tickers
+            ],
+            hoverinfo='text',
+            marker=dict(
+                size=[_node_size(degree) for degree in other_degrees],
+                color='rgba(140, 140, 140, 0.75)',
+                line=dict(width=1, color='white')
+            ),
+            name='Other Stocks' + '                 ',  # space padding to fix aesthetics of side panel size
+            showlegend=True
+        )]
+
+        if pivot_list:
+            traces.append(go.Scatter(
+                x=[positions[ticker][0] for ticker in pivot_list],
+                y=[positions[ticker][1] for ticker in pivot_list],
+                mode='markers+text',
+                text=pivot_list,
+                textposition='top center',
+                hovertext=[
+                    f'{ticker}<br>Sector: {cg.get_sector(ticker)}<br>Neighbours: {len(cg.get_neighbours(ticker))}'
+                    for ticker in pivot_list
+                ],
+                hoverinfo='text',
+                marker=dict(
+                    size=[_node_size(degree) for degree in pivot_degrees],
+                    color='#AE67FF',
+                    line=dict(width=1, color='white')
+                ),
+                name='Pivot Candidates',
+                showlegend=True
+            ))
+
+        if start_ticker in positions:
+            start_degree = len(cg.get_neighbours(start_ticker))
+            traces.append(go.Scatter(
+                x=[positions[start_ticker][0]],
+                y=[positions[start_ticker][1]],
+                mode='markers+text',
+                text=[start_ticker],
+                textposition='top center',
+                hovertext=[
+                    f'{start_ticker}<br>Sector: {cg.get_sector(start_ticker)}<br>Neighbours: {start_degree}'
+                ],
+                hoverinfo='text',
+                marker=dict(
+                    size=[_node_size(start_degree)],
+                    color='#FFD95C',
+                    line=dict(width=2, color='white')
+                ),
+                name='Start Ticker',
+                showlegend=True
+            ))
+
+        return traces
+
     if not color_by_sector:
-        # Simpler fallback mode: all stocks in one trace, all the same color.
+        # simpler fallback mode: all stocks in one trace, all the same color.
         return [go.Scatter(
             # x and y positions must be in the same ticker order as text/hover data
             # so each label and hover card matches the right plotted point.
@@ -184,7 +259,7 @@ def build_node_traces(cg: CorrelationGraph,
         )]
 
     sector_to_points: dict[str, list[tuple[str, int]]] = {}
-    # Group stocks by sector so we can create one trace per sector.
+    # group stocks by sector so we can create one trace per sector.
     for ticker, sector, degree in zip(tickers, sectors, degrees):
         if sector not in sector_to_points:
             sector_to_points[sector] = []
@@ -223,13 +298,17 @@ def build_node_traces(cg: CorrelationGraph,
 def traces_for_graph(cg: CorrelationGraph,
                      positions: dict[str, tuple[float, float]],
                      color_by_sector: bool,
-                     threshold: float | None = None) -> list[go.Scatter]:
+                     threshold: float | None = None,
+                     start_ticker: str | None = None,
+                     pivot_tickers: set[str] | None = None) -> list[go.Scatter]:
     """Return all traces needed to draw one graph."""
     # The figure is built from:
     # 1. edge traces (positive and negative)
     # 2. node traces (one per sector, or one total trace in fallback mode)
     graph = graph_to_networkx(cg)
-    return build_edge_traces(graph, positions) + build_node_traces(cg, positions, color_by_sector, threshold)
+    return build_edge_traces(graph, positions) + build_node_traces(
+        cg, positions, color_by_sector, threshold, start_ticker, pivot_tickers
+    )
 
 
 def sector_to_color_map(sectors: list[str]) -> dict[str, str]:
@@ -308,10 +387,11 @@ def side_panel_annotation(cg: CorrelationGraph) -> dict:
 
 
 def create_interactive_graph(
-    graphs_by_threshold: dict[float, CorrelationGraph],
-    color_by_sector: bool = True,
-    title: str = 'Stock Correlation Network by Threshold',
-    start_threshold: int = 0
+        graphs_by_threshold: dict[float, CorrelationGraph],
+        color_by_sector: bool = True,
+        title: str = 'Stock Correlation Network by Threshold',
+        start_threshold: int = 0,
+        show_side_annotation: bool = True
 ) -> go.Figure:
     """Create interactive Plotly figure with hover info, color coding, a threshold slider, and a color key."""
 
@@ -332,7 +412,7 @@ def create_interactive_graph(
             data=traces_for_graph(graph, positions, color_by_sector, threshold),
             layout=go.Layout(
                 title=f'{title} (threshold = {threshold:.1f})',
-                annotations=[side_panel_annotation(graph)]
+                annotations=[side_panel_annotation(graph)] if show_side_annotation else []
             )
         ))
 
@@ -349,7 +429,7 @@ def create_interactive_graph(
             margin=dict(b=80, l=20, r=180, t=40),
             # Move the legend to the right so it behaves like a colour key.
             legend=dict(x=1.02, y=1, xanchor='left', yanchor='top'),
-            annotations=[side_panel_annotation(reference_graph)],
+            annotations=[side_panel_annotation(reference_graph)] if show_side_annotation else [],
             # Hide axis lines/ticks because this is a network diagram, not an x-y chart.
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
@@ -373,11 +453,45 @@ def create_interactive_graph(
     return fig
 
 
+def create_graph_figure(
+        graph: CorrelationGraph,
+        positions: dict[str, tuple[float, float]],
+        threshold: float,
+        color_by_sector: bool = True,
+        title: str = 'Stock Correlation Network by Threshold',
+        show_side_annotation: bool = True,
+        start_ticker: str | None = None,
+        pivot_tickers: set[str] | None = None
+) -> go.Figure:
+    """Create a single-threshold figure.
+
+    This is useful for Dash callbacks where we want one threshold at a time,
+    instead of rebuilding the whole slider figure on every update.
+    """
+    fig = go.Figure(
+        data=traces_for_graph(graph, positions, color_by_sector, threshold, start_ticker, pivot_tickers),
+        layout=go.Layout(
+            title=f'{title} (threshold = {threshold:.1f})',
+            autosize=True,
+            showlegend=True,
+            hovermode='closest',
+            margin=dict(b=80, l=20, r=180, t=40),
+            legend=dict(x=1.02, y=1, xanchor='left', yanchor='top'),
+            annotations=[side_panel_annotation(graph)] if show_side_annotation else [],
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+        )
+    )
+    return fig
+
+
 def run_visualization(graphs_by_threshold: dict[float, CorrelationGraph]) -> None:
     """Open a threshold-slider visualization."""
     fig = create_interactive_graph(graphs_by_threshold)
     fig.show(config=CONFIG)
 
+
 if __name__ == '__main__':
     import doctest
+
     doctest.testmod()
