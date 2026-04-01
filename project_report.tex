@@ -22,7 +22,21 @@ The GICS, however, rests on the assumption that companies within the same catego
 \textbf{Our question:} \textbf{To what extent do traditional GICS sectors remain mathematically distinct to one another during periods of high market volatility, and can graph-based detection identify 'pivot stocks' that supposedly connect unrelated industries?}
 
 \subsection*{Dataset(s) Used}
-This project's dataset is a subset of Yahoo's financial data. In particular, the graph calculated the correlation between the SP100 companies. When the ticker data is downloaded, it returns in the form of a \texttt{pandas.DataFrame} object. (DESCRIBE HOW THE DATAFRAME LOOKS IM FORGETTING ATM - WE ONLY USE THE NAME, SECTOR, AND ADJ CLOSE PRICE FROM THE DATA)
+This project's dataset is a subset of Yahoo's financial data. In particular, we use the S\&P 100 companies when building the correlation graph. When the ticker data is downloaded, it returns in the form of a \texttt{pandas.DataFrame}. For more than one ticker, the columns are arranged as a multi-level index (price fields and ticker symbols); we flatten this in \texttt{download\_tickers} in \texttt{data\_reader.py} using \texttt{DataFrame.stack()} and \texttt{DataFrame.reset\_index()} so that each row is one date and one ticker. The flattened table includes \texttt{Date}, \texttt{Ticker}, and OHLCV columns, where OHLCV stands for the usual daily fields: \textbf{O}pen (first trade price), \textbf{H}igh, \textbf{L}ow, \textbf{C}lose (last trade price), and \textbf{V}olume (shares traded). Table~\ref{tab:flattened-prices} shows the shape of that row-wise table with illustrative values; our program only reads \texttt{Date}, \texttt{Ticker}, and \texttt{Close} when we call \texttt{log\_return\_list()} in \texttt{compute.py} to build the log-return series. Under \texttt{yfinance}'s default \texttt{auto\_adjust=True}, the \texttt{Close} column is adjusted for splits and dividends in line with the library's usual behavior. GICS sectors are not columns in that price table. We call \texttt{get\_sectors\_for\_tickers()} separately, which uses \texttt{Ticker.info.get('sector', 'Unknown')} for each ticker, and we attach those sector strings to nodes in the \texttt{CorrelationGraph}.
+
+\begin{table}[H]
+    \centering
+    \caption{Illustrative rows of the flattened price \texttt{DataFrame} after \texttt{stack} / \texttt{reset\_index} (not actual downloaded output).}
+    \label{tab:flattened-prices}
+    \begin{tabular}{|c|c|c|c|c|c|c|}
+        \hline
+        \textbf{Date} & \textbf{Ticker} & \textbf{Open} & \textbf{High} & \textbf{Low} & \textbf{Close} & \textbf{Volume} \\
+        \hline
+        2025-01-02 & AAPL & 184.22 & 186.00 & 183.89 & 185.64 & 64220000 \\
+        2025-01-02 & MSFT & 370.10 & 373.00 & 369.50 & 372.50 & 22450000 \\
+        \hline
+    \end{tabular}
+\end{table}
 
 \section*{Computational Overview}
 As outlined in Section 1, we retrieve stock price data from the Yahoo Finance Python API, \texttt{yfinance}. With each ticker represented as a node in a graph, edges are formed based on the correlation between two nodes' price trends. If the strength of the correlation exceeds a user-specified threshold, an edge is formed between them. This forms an undirected weighted graph, which is central in analyzing price behaviors across sectors, such as whether an economic event affecting one sector propagates to another.\\
@@ -32,6 +46,8 @@ To construct a graph, the historical price data of the user-specified set of tic
 
 The module used for data retrieval is \texttt{yfinance-cache}, an unofficial caching wrapper of \texttt{yfinance} designed to prevent rate-limiting by the Yahoo Finance API by caching previously retrieved data locally. Data is retrieved by calling the \texttt{yfinance\_cache.download()} function. A \texttt{yfinance\_cache.Ticker} object, instantiated with a ticker symbol, contains all available information for that stock. Calling \texttt{Ticker.info.get('sector', 'Unknown')} returns the sector of each ticker.\\
 The module used for data storage and manipulation is \texttt{pandas}, a library providing high-performance data structures and tools to manipulate tabular data. Data retrieved from  \texttt{yfinance\_cache.download()} is returned as a \texttt{pandas.DataFrame} object. The \texttt{DataFrame} is then flattened from a multi-level column format to a row-wise format indexed by date and ticker by calling \texttt{DataFrame.stack()} and \texttt{DataFrame.reset\_index()}. This format allows direct access to the close prices per ticker and date from which log returns are calculated.
+
+We also implement the crash simulation and pivot-candidate ideas from our proposal inside \texttt{CorrelationGraph}. The function \texttt{bfs\_crash\_simulation(start\_ticker)} runs a breadth-first search along correlation edges from a user-selected ``crashing'' stock, recording nodes layer by layer up to a maximum depth given by \texttt{BFS\_DEPTH} in \texttt{constants.py}. The helper \texttt{\_reachable\_from\_crash} unions those layers into one set of tickers, which we treat as the reach of the simulated shock. The function \texttt{get\_pivot\_candidates(start\_ticker)} then looks at each ticker in that set: it counts how many distinct GICS sectors appear among that ticker and its graph neighbours that also lie in the set, and it keeps tickers where that count is greater than one. The return value is a list of \texttt{(ticker, sector\_diversity)} pairs sorted so that the largest diversity appears first. This is a graph-based heuristic for stocks that bridge sectors under the simulation; it is not a ready-made list of pivot stocks taken from outside our program.
 
 
 \section*{Visualization Overview}
@@ -81,7 +97,15 @@ NEXT:\\
 
 
 \section*{References}
-TODO
+\begin{enumerate}
+    \item Aroussi, R. (2024). \textit{yfinance: An Open-Source Tool}. \url{https://github.com/ranaroussi/yfinance}
+    \item The pandas development team (2024). \textit{pandas-dev/pandas: Pandas Documentation}. \url{https://pandas.pydata.org/docs/}
+    \item Harris, C. R., et al. (2020). \textit{Array programming with NumPy}. Nature. \url{https://numpy.org/doc/}
+    \item NetworkX Developers. (2024). \textit{NetworkX Density Function Documentation}. \url{https://networkx.org/documentation/stable/reference/generated/networkx.classes.function.density.html}
+    \item Plotly Technologies Inc. (2024). \textit{Interactive Graphing Library for Python}. \url{https://plotly.com/python/}
+    \item MSCI and S\&P Dow Jones Indices. (2023). \textit{GICS Sector Methodology Overview}.
+    \item \textit{yfinance-cache} (Python package). Caching wrapper for \texttt{yfinance}. \url{https://pypi.org/project/yfinance-cache/}
+\end{enumerate}
 
 
 \end{document}
