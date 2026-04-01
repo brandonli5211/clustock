@@ -3,7 +3,7 @@
 
 # Data
 yfinance
-yfinance-cache
+yfinance_cache
 pandas
 numpy
 
