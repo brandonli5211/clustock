@@ -22,7 +22,7 @@ The GICS, however, rests on the assumption that companies within the same catego
 \textbf{Our question:} \textbf{To what extent do traditional GICS sectors remain mathematically distinct to one another during periods of high market volatility, and can graph-based detection identify 'pivot stocks' that supposedly connect unrelated industries?}
 
 \subsection*{Dataset(s) Used}
-This project's dataset is a subset of Yahoo's financial data. In particular, we use the S\&P 100 companies when building the correlation graph. When the ticker data is downloaded, it returns in the form of a \texttt{pandas.DataFrame}. For more than one ticker, the columns are arranged as a multi-level index (price fields and ticker symbols); we flatten this in \texttt{download\_tickers} in \texttt{data\_reader.py} using \texttt{DataFrame.stack()} and \texttt{DataFrame.reset\_index()} so that each row is one date and one ticker. The flattened table includes \texttt{Date}, \texttt{Ticker}, and OHLCV columns, where OHLCV stands for the usual daily fields: \textbf{O}pen (first trade price), \textbf{H}igh, \textbf{L}ow, \textbf{C}lose (last trade price), and \textbf{V}olume (shares traded). Table~\ref{tab:flattened-prices} shows the shape of that row-wise table with illustrative values; our program only reads \texttt{Date}, \texttt{Ticker}, and \texttt{Close} when we call \texttt{log\_return\_list()} in \texttt{compute.py} to build the log-return series. Under \texttt{yfinance}'s default \texttt{auto\_adjust=True}, the \texttt{Close} column is adjusted for splits and dividends in line with the library's usual behavior. GICS sectors are not columns in that price table. We call \texttt{get\_sectors\_for\_tickers()} separately, which uses \texttt{Ticker.info.get('sector', 'Unknown')} for each ticker, and we attach those sector strings to nodes in the \texttt{CorrelationGraph}.
+This project's dataset is a subset of Yahoo's financial data\textsuperscript{1}. In particular, we use the S\&P 100 companies when building the correlation graph. When the ticker data is downloaded, it returns in the form of a \texttt{pandas.DataFrame}. For more than one ticker, the columns are arranged as a multi-level index (price fields and ticker symbols); we flatten this in \texttt{download\_tickers} in \texttt{data\_reader.py} using \texttt{DataFrame.stack()} and \texttt{DataFrame.reset\_index()} so that each row is one date and one ticker. The flattened table includes \texttt{Date}, \texttt{Ticker}, and OHLCV columns, where OHLCV stands for the usual daily fields: \textbf{O}pen (first trade price), \textbf{H}igh, \textbf{L}ow, \textbf{C}lose (last trade price), and \textbf{V}olume (shares traded). Table~\ref{tab:flattened-prices} shows the shape of that row-wise table with illustrative values; our program only reads \texttt{Date}, \texttt{Ticker}, and \texttt{Close} when we call \texttt{log\_return\_list()} in \texttt{compute.py} to build the log-return series. Under \texttt{yfinance}'s default \texttt{auto\_adjust=True}, the \texttt{Close} column is adjusted for splits and dividends in line with the library's usual behavior. GICS sectors are not columns in that price table. We call \texttt{get\_sectors\_for\_tickers()} separately, which uses \texttt{Ticker.info.get('sector', 'Unknown')} for each ticker, and we attach those sector strings to nodes in the \texttt{CorrelationGraph}.
 
 \begin{table}[H]
     \centering
@@ -56,7 +56,8 @@ TODO: Explain how the visualization works, as well as the libraries involved to 
 
 \section*{Running the Program}
 The provided file \texttt{requirements.txt} provides all the required modules to run the program. Note that when installing \texttt{yfinance-cache}, an underscore must be used instead of a hyphen, i.e.\texttt{pip install yfinance\_cache}.\\
-\textbf{(WE WILL PROVIDE A ZIP FILE ON MARKUS/SENDUTORONTO/UOFT ONEDRIVE)}\\
+Because we are retrieving data through the Yahoo Finance API, this project does not rely on a static dataset, as mentioned previously. However, the project uses the S\&P 100 tickers (as of 2024-2025) as the project's dataset, defined in \texttt{constants.py} which is included in the project submission. When \texttt{main.py} is run, it takes the tickers from \texttt{constants.py} and retrieves the corresponding historical price data directly from the Yahoo Finance API.
+\textbf{(JUST MAKE SURE THIS IS OK FIRSY BEFORE PUSHING OK)}\\
 When \texttt{main.py} is run, you may notice that the result will return slowly, which is due to the nature of \texttt{yfinance.download()}. With a larger sample, it will take some time to download each ticker's data before creating the graph.\\
 The following shows something similar to the initial appearance of the graph. Hovering the mouse over a node shows the node's ticker, GICS sector, and the number of neighbors. On the right hand side of the screen is a legend, as well as a ranking of the nodes with the most amount of connections. The larger a node, the more neighbors it has. In this mode, nodes are clustered by the number of correlations with other nodes. 
 \begin{figure}[H]
@@ -98,6 +99,7 @@ NEXT:\\
 
 \section*{References}
 \begin{enumerate}
+    \item Yahoo Finance. (2025). \textit{Yahoo Finance — Stock Market Live, Quotes, Business \& Finance News}. \url{https://finance.yahoo.com}
     \item Aroussi, R. (2024). \textit{yfinance: An Open-Source Tool}. \url{https://github.com/ranaroussi/yfinance}
     \item The pandas development team (2024). \textit{pandas-dev/pandas: Pandas Documentation}. \url{https://pandas.pydata.org/docs/}
     \item Harris, C. R., et al. (2020). \textit{Array programming with NumPy}. Nature. \url{https://numpy.org/doc/}
@@ -108,4 +110,5 @@ NEXT:\\
 \end{enumerate}
 
 
+\end{document}
 \end{document}
