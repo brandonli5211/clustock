@@ -186,7 +186,7 @@ def run_full_pipeline(use_sample: bool = True) -> None:
                 ),
             ], style={
                 'position': 'absolute',
-                'top': '400px',
+                'bottom': '120px',
                 'right': '30px',
                 'width': '180px',
                 'padding': '20px',
