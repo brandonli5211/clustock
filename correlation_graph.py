@@ -84,7 +84,6 @@ class CorrelationGraph:
         queue = deque()
         visited = {}
         nodes_at_depths = {} # Output set
-        depth = 0
 
         #BFS
         queue.append(start_ticker)
@@ -105,9 +104,7 @@ class CorrelationGraph:
             for next in self.get_neighbours(curr):
                 if next not in visited.keys():
                     queue.append(next)
-                    visited[next] = depth + 1
-
-            depth += 1
+                    visited[next] = visited[curr] + 1
 
         return nodes_at_depths
 
