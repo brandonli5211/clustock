@@ -6,6 +6,7 @@ edges store Pearson correlation weights above a threshold.
 
 from __future__ import annotations
 
+from networkx.classes import number_of_edges
 
 from constants import BFS_DEPTH, SECTORS
 from collections import deque
@@ -45,6 +46,10 @@ class CorrelationGraph:
             return
         self._vertices[ticker1].neighbours[ticker2] = weight
         self._vertices[ticker2].neighbours[ticker1] = weight
+
+    def get_weight(self, ticker1: str, ticker2: str) -> float:
+        """Get the correlation weight between two nodes"""
+        return self.get_neighbours(ticker1)[ticker2]
 
     def get_all_tickers(self) -> list[str]:
         """Return list of all ticker symbols."""
@@ -169,6 +174,45 @@ class CorrelationGraph:
             densities.append((sector, density))
         densities.sort(key=lambda pair: (-pair[1], pair[0]))
         return densities[:limit]
+
+    def get_average_abs_weight(self) -> float:
+        """Return the average absolute weight between two nodes in the graph"""
+        # This graph has unweighted edges, so I will doublecount the total edge weights and doublecount the total
+        # number of edges because this is easier than storing each edge that has been used so far
+        edge_total = 0
+        correlation_total = 0
+        for u in self.get_all_tickers():
+            for v in self.get_all_tickers():
+                if u != v:
+                    correlation_total += abs(self.get_weight(u, v))
+                    edge_total += 1
+
+        return correlation_total / edge_total
+
+    def sector_average_abs_pearson_coefficients(self, sector: str) -> float:
+        """Return the average absolute value of the pearson correlation coefficient between two tickers
+        in a sector; if a sector contains only 1, return -1 as the output"""
+        tickers_in_sector = []
+
+        for ticker in self.get_all_tickers():
+            if self.get_sector(ticker) == sector:
+                tickers_in_sector.append(ticker)
+
+        sector_subgraph = self.subgraph(tickers_in_sector)
+
+        if len(tickers_in_sector) <= 1:
+            return -1
+        else:
+            return sector_subgraph.get_average_abs_weight()
+
+    def get_ordered_sector_abs_pearson_coefficients(self, limit: int = 11) -> list[tuple[str, int]]:
+        """Return list or ordered tuples mapping (sector, density) sorted from highest to least density"""
+        abs_pearson_coefficients = []
+        for sector in SECTORS:
+            abs_pearson_coefficient = self.sector_average_abs_pearson_coefficients(sector)
+            abs_pearson_coefficients.append((sector, abs_pearson_coefficient))
+        abs_pearson_coefficients.sort(key=lambda pair: (-pair[1], pair[0]))
+        return abs_pearson_coefficients[:limit]
 
 
 if __name__ == '__main__':

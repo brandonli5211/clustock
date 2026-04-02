@@ -77,6 +77,36 @@ def density_leaderboard_panel(graph: CorrelationGraph) -> html.Div:
         'backgroundColor': 'rgba(255, 255, 255, 0.88)'
     })
 
+def average_abs_pearson_coefficient_leaderboard_panel(graph: CorrelationGraph) -> html.Div:
+    """Return panel containing the rankings for average pearson corrleations between sectors
+
+        Prerequisites:
+            - graph is a complete graph
+    """
+    average_abs_pearson_coefficients = graph.get_ordered_sector_abs_pearson_coefficients()
+    return html.Div([
+        html.Div("Average Absolute Value of Pearson Correlation Coefficients",
+                 style={'fontWeight': '600', 'marginBottom': '4px'}),
+        html.Div([
+            html.Div([
+                # https://stackoverflow.com/questions/394809/does-python-have-a-ternary-conditional-operator
+                html.Span(f'{index}. {sector} \
+                ({round(abs_average_pearson_coefficient, 5) if abs_average_pearson_coefficient != -1 \
+                    else "N/A <= 1 Stock in Sector"})'),
+                html.Span(
+                    ' ●',
+                    style= {'color': SECTOR_COLORS[sector]}
+                )
+            ])
+            for index, (sector, abs_average_pearson_coefficient) in enumerate(average_abs_pearson_coefficients, start=1)
+        ])
+    ], style={
+        'marginTop': '12px',
+        'padding': '6px 8px',
+        'border': '1px solid #C9D4E6',
+        'backgroundColor': 'rgba(255, 255, 255, 0.88)'
+    })
+
 
 def run_full_pipeline(use_sample: bool = True) -> None:
     """Run the full pipeline: fetch data, build graph,launch Plotly visualization (with slider).
@@ -87,7 +117,8 @@ def run_full_pipeline(use_sample: bool = True) -> None:
     tickers = set(SP100_TICKERS[:15]) if use_sample else set(SP100_TICKERS)
     print('Building correlation graph for', len(tickers), 'tickers...')
     thresholds = [x / 10 for x in range(1,11)]
-    graphs_by_threshold = build_correlation_graphs_for_thresholds(tickers,thresholds, period='1mo', interval='1d')
+    graphs_by_threshold = build_correlation_graphs_for_thresholds(tickers, thresholds, period='1mo', interval='1d')
+    complete_graph = build_correlation_graphs_for_thresholds(tickers, [0], period='1mo', interval='1d')[0]
     positions = get_positions(graphs_by_threshold[thresholds[0]])
     sector_oriented_positions = get_sector_oriented_positions(graphs_by_threshold[thresholds[0]])
     communinity_positions = get_community_positions(graphs_by_threshold[thresholds[0]])
@@ -186,7 +217,7 @@ def run_full_pipeline(use_sample: bool = True) -> None:
                 ),
             ], style={
                 'position': 'absolute',
-                'bottom': '120px',
+                'bottom': '20px',
                 'right': '30px',
                 'width': '180px',
                 'padding': '20px',
@@ -221,15 +252,42 @@ def run_full_pipeline(use_sample: bool = True) -> None:
             }
         ),
         html.Div([
-            html.Div("Densities of Sector Subgraphs", style={'fontWeight': '600', 'marginBottom': '4px'}),
-            html.Div(
-                children=[
-                    f"Density of Full Graph: {round(graphs_by_threshold[default_threshold].density(), 5)}",
-                    density_leaderboard_panel(graphs_by_threshold[default_threshold])
-                ],
-                id='density-leaderboard'
+            html.Div([
+                html.Div("Densities of Sector Subgraphs", style={'fontWeight': '600', 'marginBottom': '4px'}),
+                html.Div(
+                    children=[
+                        f"Density of Full Graph: {round(graphs_by_threshold[default_threshold].density(), 5)}",
+                        density_leaderboard_panel(graphs_by_threshold[default_threshold])
+                    ],
+                    id='density-leaderboard'
+                ),
+            ], style={
+                    # 'position': 'absolute',
+                    # 'top': '400px',
+                    # 'right': '30px',
+                    # 'width': '180px',
+                    'marginTop': '20px',
+                    'padding': '20px',
+                    'boxSizing': 'border-box',
+                    'backgroundColor': 'rgba(255, 255, 255, 0.88)',
+                    'border': '1px solid #C9D4E6',
+                    'fontFamily': '"Open Sans", verdana, arial, sans-serif',
+                    'fontSize': '12px',
+                    'color': '#2a3f5f'
+                }
             ),
-        ], style={
+            html.Div([
+                html.Div("Average Absolute Value of Pearson Coefficients in Sector Subgraph", \
+                         style={'fontWeight': '600', 'marginBottom': '4px'}),
+                html.Div(
+                    children=[
+                        f"Average Absolute Value of Pearson Coefficients in Sector Subgraph: \
+                        {round(complete_graph.get_average_abs_weight(), 5)}",
+                        average_abs_pearson_coefficient_leaderboard_panel(complete_graph)
+                    ],
+                    id='avg-abs-pearson-coefficient-leaderboard'
+                ),
+            ], style={
                 # 'position': 'absolute',
                 # 'top': '400px',
                 # 'right': '30px',
@@ -243,7 +301,12 @@ def run_full_pipeline(use_sample: bool = True) -> None:
                 'fontSize': '12px',
                 'color': '#2a3f5f'
             }
-        )
+            )
+        ], style={
+            'width': '100vw',
+            'display': 'flex',
+            'justify-content': 'space-evenly'
+        })
     ])
 
     # Input Handling
