@@ -104,7 +104,7 @@ def download_tickers(tickers: set[str],
     """
     params = {'period': period, 'interval': interval, 'start': start, 'end': end}
     params = {k: s for k, s in params.items() if s}
-    data = yf.download(tickers, threads=False, progress=False, **params)
+    data = yf.download(tickers, threads=False, progress=True, **params)
     # auto_adjust is default True, so Close becomes Adj Close.
 
     if isinstance(data.columns, pd.MultiIndex):  # Adding more than one ticker
