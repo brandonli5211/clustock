@@ -4,28 +4,26 @@ Entry point: download prices, build the correlation graph, open the interactive 
 """
 from __future__ import annotations
 
+from dash import Dash, html, dcc, Output, Input, ALL, ctx, no_update
+
 from compute import build_correlation_graphs
-from visualization import SECTOR_COLORS, create_graph_figure, get_positions, sector_to_color_map, top_neighbour_stocks, \
-    get_sector_oriented_positions, \
+from visualization import SECTOR_COLORS, create_graph_figure, get_positions, sector_to_color_map, \
+    top_neighbour_stocks, get_sector_oriented_positions, \
     get_community_positions
 from correlation_graph import CorrelationGraph
-from constants import SP100_TICKERS, SECTORS
+from constants import SP100_TICKERS
 from config import CONFIG
 
-from dash import Dash, html, dcc, callback, Output, Input, ALL, ctx, no_update
 
-
-def edge_sign_counts(graph) -> tuple[int, int]:
+def edge_sign_counts(graph: CorrelationGraph) -> tuple[int, int]:
     """return the number of positive and negative edges in the graph."""
     positive = 0
     negative = 0
     for ticker in graph.get_all_tickers():
         for neighbour, weight in graph.get_neighbours(ticker).items():
             if ticker < neighbour:
-                if weight >= 0:
-                    positive += 1
-                else:
-                    negative += 1
+                positive += int(weight >= 0)
+                negative += int(weight < 0)
     return positive, negative
 
 
@@ -55,6 +53,7 @@ def most_connections_panel(graph: CorrelationGraph) -> html.Div:
         'backgroundColor': 'rgba(255, 255, 255, 0.88)'
     })
 
+
 def density_leaderboard_panel(graph: CorrelationGraph) -> html.Div:
     """Return panel containing the rankings for graph density between sectors"""
     densities = graph.get_ordered_sector_densities()
@@ -65,7 +64,7 @@ def density_leaderboard_panel(graph: CorrelationGraph) -> html.Div:
                 html.Span(f'{index}. {sector} ({round(density, 5)})'),
                 html.Span(
                     ' ●',
-                    style= {'color': SECTOR_COLORS[sector]}
+                    style={'color': SECTOR_COLORS[sector]}
                 )
             ])
             for index, (sector, density) in enumerate(densities, start=1)
@@ -77,28 +76,30 @@ def density_leaderboard_panel(graph: CorrelationGraph) -> html.Div:
         'backgroundColor': 'rgba(255, 255, 255, 0.88)'
     })
 
-def average_abs_pearson_coefficient_leaderboard_panel(graph: CorrelationGraph) -> html.Div:
+
+def avg_abs_pearson_panel(graph: CorrelationGraph) -> html.Div:
     """Return panel containing the rankings for average pearson corrleations between sectors
 
         Prerequisites:
             - graph is a complete graph
     """
-    average_abs_pearson_coefficients = graph.get_ordered_sector_abs_pearson_coefficients()
+    avg_abs_coeffs = graph.ordered_sector_abs_pearsons()
     return html.Div([
         html.Div("Average Absolute Value of Pearson Correlation Coefficients",
                  style={'fontWeight': '600', 'marginBottom': '4px'}),
         html.Div([
             html.Div([
                 # https://stackoverflow.com/questions/394809/does-python-have-a-ternary-conditional-operator
-                html.Span(f'{index}. {sector} \
-                ({round(abs_average_pearson_coefficient, 5) if abs_average_pearson_coefficient != -1 \
-                    else "N/A <= 1 Stock in Sector"})'),
+                html.Span(
+                    f'{index}. {sector} '
+                    f'({round(avg_abs_coeff, 5) if avg_abs_coeff != -1 else "N/A <= 1 Stock in Sector"})'
+                ),
                 html.Span(
                     ' ●',
-                    style= {'color': SECTOR_COLORS[sector]}
+                    style={'color': SECTOR_COLORS[sector]}
                 )
             ])
-            for index, (sector, abs_average_pearson_coefficient) in enumerate(average_abs_pearson_coefficients, start=1)
+            for index, (sector, avg_abs_coeff) in enumerate(avg_abs_coeffs, start=1)
         ])
     ], style={
         'marginTop': '12px',
@@ -106,6 +107,136 @@ def average_abs_pearson_coefficient_leaderboard_panel(graph: CorrelationGraph) -
         'border': '1px solid #C9D4E6',
         'backgroundColor': 'rgba(255, 255, 255, 0.88)'
     })
+
+
+def build_figures_by_threshold(graphs_by_threshold: dict[float, CorrelationGraph],
+                               position_views: dict[str, dict[str, tuple[float, float]]]
+                               ) -> dict[str, dict[float, object]]:
+    """Return precomputed figures grouped by threshold and view."""
+    figures_by_threshold = {
+        'Standard': {},
+        'Sector': {},
+        'Community': {}
+    }
+
+    for threshold, graph in graphs_by_threshold.items():
+        figures_by_threshold['Standard'][threshold] = create_graph_figure(
+            graph,
+            position_views['Standard'],
+            threshold,
+            show_side_annotation=False
+        )
+        figures_by_threshold['Sector'][threshold] = create_graph_figure(
+            graph,
+            position_views['Sector'],
+            threshold,
+            show_side_annotation=False
+        )
+        figures_by_threshold['Community'][threshold] = create_graph_figure(
+            graph,
+            position_views['Community'],
+            threshold,
+            show_side_annotation=False
+        )
+
+    return figures_by_threshold
+
+
+def build_graph_sets(tickers: set[str], thresholds: list[float]
+                     ) -> tuple[dict[float, CorrelationGraph], CorrelationGraph]:
+    """Build all threshold graphs once, plus the complete graph used by the summary panels."""
+    all_thresholds = [0.0] + thresholds
+    all_graphs = build_correlation_graphs(tickers, all_thresholds, period='1mo', interval='1d')
+    graphs_by_threshold = {threshold: all_graphs[threshold] for threshold in thresholds}
+    return graphs_by_threshold, all_graphs[0.0]
+
+
+def register_callbacks(app: Dash,
+                       graphs_by_threshold: dict[float, CorrelationGraph],
+                       figures_by_threshold: dict[str, dict[float, object]],
+                       position_views: dict[str, dict[str, tuple[float, float]]]) -> None:
+    """Register all Dash callbacks for the app."""
+
+    @app.callback(
+        Output('graph', 'figure'),
+        Output('most-connections-output', 'children'),
+        Input('threshold-slider', 'value'),
+        Input('pivot_start_ticker', 'value'),
+        Input('view-menu', 'value'))
+    def update_figure(selected_threshold: float, start_ticker: str | None, view_option: str) -> tuple[object, html.Div]:
+        """Return the figure and most-connections panel after input changes."""
+        selected_threshold = round(selected_threshold, 1)
+        graph = graphs_by_threshold[selected_threshold]
+
+        if start_ticker in SP100_TICKERS:
+            pivots = graph.get_pivot_candidates(start_ticker)
+            pivot_tickers = {pivot[0] for pivot in pivots}
+            fig = create_graph_figure(
+                graph,
+                position_views[view_option],
+                selected_threshold,
+                highlight=(start_ticker, pivot_tickers),
+                show_side_annotation=False
+            )
+        else:
+            fig = figures_by_threshold[view_option][selected_threshold]
+
+        return fig, most_connections_panel(graph)
+
+    @app.callback(
+        Output('test-pivot-output', 'children'),
+        Input('threshold-slider', 'value'),
+        Input("pivot_start_ticker", "value"))
+    def update_pivots(selected_threshold: float, start_ticker: str | None) -> html.Div | str:
+        """Return pivot candidates for the selected start ticker."""
+        selected_threshold = round(selected_threshold, 1)
+        if start_ticker in SP100_TICKERS:
+            pivots = graphs_by_threshold[selected_threshold].get_pivot_candidates(start_ticker)
+            pivot_ticker_list = [pivot[0] for pivot in pivots]
+            return html.Div([
+                html.Button(
+                    ticker,
+                    id={'type': 'pivot-button', 'ticker': ticker},
+                    n_clicks=0,
+                    style={
+                        'display': 'block',
+                        'width': '100%',
+                        'marginBottom': '6px',
+                        'textAlign': 'left',
+                        'cursor': 'pointer',
+                        'fontFamily': 'inherit',
+                        'fontSize': '12px',
+                    }
+                )
+                for ticker in pivot_ticker_list
+            ])
+        return ""
+
+    @app.callback(
+        Output('density-leaderboard', 'children'),
+        Input('threshold-slider', 'value'),
+    )
+    def update_density_leaderboard(selected_threshold: float) -> list[str | html.Div]:
+        """Return the full-graph density and sector density leaderboard."""
+        selected_threshold = round(selected_threshold, 1)
+        return [
+            f"Density of Full Graph: {round(graphs_by_threshold[selected_threshold].density(), 5)}",
+            density_leaderboard_panel(graphs_by_threshold[selected_threshold])
+        ]
+
+    @app.callback(
+        Output('pivot_start_ticker', 'value'),
+        Input({'type': 'pivot-button', 'ticker': ALL}, 'n_clicks'),
+        prevent_initial_call=True
+    )
+    def select_pivot_candidate(_clicks: list[int]) -> str | object:
+        """Set the dropdown to the clicked pivot candidate ticker."""
+        triggered = ctx.triggered_id
+        if triggered is None or not isinstance(triggered, dict):
+            return no_update
+        if not any(click_count for click_count in _clicks):
+            return no_update
+        return triggered['ticker']
 
 
 def run_full_pipeline(use_sample: bool = True) -> None:
@@ -117,38 +248,16 @@ def run_full_pipeline(use_sample: bool = True) -> None:
     tickers = set(SP100_TICKERS[:15]) if use_sample else set(SP100_TICKERS)
     print('Building correlation graph for', len(tickers), 'tickers...')
     thresholds = [x / 10 for x in range(1, 11)]
-    graphs_by_threshold = build_correlation_graphs(tickers, thresholds, period='1mo', interval='1d')
-    complete_graph = build_correlation_graphs(tickers, [0], period='1mo', interval='1d')[0]
-    positions = get_positions(graphs_by_threshold[thresholds[0]])
-    sector_oriented_positions = get_sector_oriented_positions(graphs_by_threshold[thresholds[0]])
-    communinity_positions = get_community_positions(graphs_by_threshold[thresholds[0]])
-    figures_by_threshold = {
-        'Standard': {},
-        'Sector': {},
-        'Community': {}
+    graphs_by_threshold, complete_graph = build_graph_sets(tickers, thresholds)
+    position_views = {
+        'Standard': get_positions(graphs_by_threshold[thresholds[0]]),
+        'Sector': get_sector_oriented_positions(graphs_by_threshold[thresholds[0]]),
+        'Community': get_community_positions(graphs_by_threshold[thresholds[0]])
     }
-
+    figures_by_threshold = build_figures_by_threshold(graphs_by_threshold, position_views)
     for threshold in thresholds:
         graph = graphs_by_threshold[threshold]
         positive_edges, negative_edges = edge_sign_counts(graph)
-        figures_by_threshold['Standard'][threshold] = create_graph_figure(
-            graph,
-            positions,
-            threshold,
-            show_side_annotation=False
-        )
-        figures_by_threshold['Sector'][threshold] = create_graph_figure(
-            graph,
-            sector_oriented_positions,
-            threshold,
-            show_side_annotation=False
-        )
-        figures_by_threshold['Community'][threshold] = create_graph_figure(
-            graph,
-            communinity_positions,
-            threshold,
-            show_side_annotation=False
-        )
         print(
             f'Threshold {threshold} -> '
             f'density: {round(graph.density(), 3)}, '
@@ -262,36 +371,28 @@ def run_full_pipeline(use_sample: bool = True) -> None:
                     id='density-leaderboard'
                 ),
             ], style={
-                    # 'position': 'absolute',
-                    # 'top': '400px',
-                    # 'right': '30px',
-                    # 'width': '180px',
-                    'marginTop': '20px',
-                    'padding': '20px',
-                    'boxSizing': 'border-box',
-                    'backgroundColor': 'rgba(255, 255, 255, 0.88)',
-                    'border': '1px solid #C9D4E6',
-                    'fontFamily': '"Open Sans", verdana, arial, sans-serif',
-                    'fontSize': '12px',
-                    'color': '#2a3f5f'
-                }
+                'marginTop': '20px',
+                'padding': '20px',
+                'boxSizing': 'border-box',
+                'backgroundColor': 'rgba(255, 255, 255, 0.88)',
+                'border': '1px solid #C9D4E6',
+                'fontFamily': '"Open Sans", verdana, arial, sans-serif',
+                'fontSize': '12px',
+                'color': '#2a3f5f'
+            }
             ),
             html.Div([
-                html.Div("Average Absolute Value of Pearson Coefficients in Sector Subgraph", \
+                html.Div("Average Absolute Value of Pearson Coefficients in Sector Subgraph",
                          style={'fontWeight': '600', 'marginBottom': '4px'}),
                 html.Div(
                     children=[
                         f"Average Absolute Value of Pearson Coefficients in Sector Subgraph: \
                         {round(complete_graph.get_average_abs_weight(), 5)}",
-                        average_abs_pearson_coefficient_leaderboard_panel(complete_graph)
+                        avg_abs_pearson_panel(complete_graph)
                     ],
                     id='avg-abs-pearson-coefficient-leaderboard'
                 ),
             ], style={
-                # 'position': 'absolute',
-                # 'top': '400px',
-                # 'right': '30px',
-                # 'width': '180px',
                 'marginTop': '20px',
                 'padding': '20px',
                 'boxSizing': 'border-box',
@@ -308,116 +409,15 @@ def run_full_pipeline(use_sample: bool = True) -> None:
             'justify-content': 'space-evenly'
         })
     ])
-
-    # Input Handling
-    @callback(
-        Output('graph', 'figure'),
-        Output('most-connections-output', 'children'),
-        Input('threshold-slider', 'value'),
-        Input('pivot_start_ticker', 'value'),
-        Input('view-menu', 'value'))
-    def update_figure(selected_threshold, start_ticker, view_option):
-        "Returns figure after handling the input"
-        selected_threshold = round(selected_threshold, 1)
-        graph = graphs_by_threshold[selected_threshold]
-
-        if start_ticker in SP100_TICKERS:
-            pivots = graph.get_pivot_candidates(start_ticker)
-            pivot_tickers = {pivot[0] for pivot in pivots}
-
-            if view_option == "Sector":
-                fig = create_graph_figure(
-                    graph,
-                    sector_oriented_positions,
-                    selected_threshold,
-                    show_side_annotation=False,
-                    start_ticker=start_ticker,
-                    pivot_tickers=pivot_tickers
-                )
-            elif view_option == "Community":
-                fig = create_graph_figure(
-                    graph,
-                    communinity_positions,
-                    selected_threshold,
-                    show_side_annotation=False,
-                    start_ticker=start_ticker,
-                    pivot_tickers=pivot_tickers
-                )
-            else:
-                fig = create_graph_figure(
-                    graph,
-                    positions,
-                    selected_threshold,
-                    show_side_annotation=False,
-                    start_ticker=start_ticker,
-                    pivot_tickers=pivot_tickers
-                )
-        else:
-            fig = figures_by_threshold[view_option][selected_threshold]
-
-        return fig, most_connections_panel(graph)
-
-    @callback(
-        Output('test-pivot-output', 'children'),
-        Input('threshold-slider', 'value'),
-        Input("pivot_start_ticker", "value"))
-    def update_pivots(selected_threshold, start_ticker):
-        "Returns pivot candidates to current test div"
-        selected_threshold = round(selected_threshold, 1)
-        if start_ticker in SP100_TICKERS:
-            pivots = graphs_by_threshold[selected_threshold].get_pivot_candidates(start_ticker)
-            pivot_ticker_list = [pivot[0] for pivot in pivots]
-            return html.Div([
-                html.Button(
-                    ticker,
-                    id={'type': 'pivot-button', 'ticker': ticker},
-                    n_clicks=0,
-                    style={
-                        'display': 'block',
-                        'width': '100%',
-                        'marginBottom': '6px',
-                        'textAlign': 'left',
-                        'cursor': 'pointer',
-                        'fontFamily': 'inherit',
-                        'fontSize': '12px',
-
-                    }
-                )
-                for ticker in pivot_ticker_list
-            ])
-        else:
-            return ""
-
-    @callback(
-        Output('density-leaderboard', 'children'),
-        Input('threshold-slider', 'value'),
-    )
-    def update_density_leaderboard(selected_threshold):
-        return [
-            f"Density of Full Graph: {round(graphs_by_threshold[selected_threshold].density(), 5)}",
-            density_leaderboard_panel(graphs_by_threshold[selected_threshold])
-        ]
-
-    @callback(
-        Output('pivot_start_ticker', 'value'),
-        Input({'type': 'pivot-button', 'ticker': ALL}, 'n_clicks'),
-        prevent_initial_call=True
-    )
-    def select_pivot_candidate(_clicks):
-        "Sets the dropdown to the clicked pivot candidate ticker."
-        triggered = ctx.triggered_id
-        if triggered is None or not isinstance(triggered, dict):
-            return no_update
-        if not any(click_count for click_count in _clicks):
-            return no_update
-        return triggered['ticker']
-
+    register_callbacks(app, graphs_by_threshold, figures_by_threshold, position_views)
     app.run(debug=True)
+
 
 if __name__ == '__main__':
     # use_sample=False for full S&P 100 (~100 tickers); True for 15 tickers (faster).
     run_full_pipeline(use_sample=False)
     import python_ta
+
     python_ta.check_all(config={
         'extra-imports': ['compute', 'visualization', 'correlation_graph', 'constants', 'config', 'dash'],
         'allowed-io': ['run_full_pipeline'],

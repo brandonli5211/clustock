@@ -5,7 +5,7 @@ Entry point: download prices, build the correlation graph, open the interactive 
 
 from __future__ import annotations
 
-from compute import build_correlation_graphs_for_thresholds
+from compute import build_correlation_graphs
 from visualization import run_visualization
 from constants import SP100_TICKERS
 
@@ -33,7 +33,7 @@ def run_full_pipeline(use_sample: bool = True) -> None:
     tickers = set(SP100_TICKERS[:15]) if use_sample else set(SP100_TICKERS)
     print('Building correlation graph for', len(tickers), 'tickers...')
     thresholds = [x / 10 for x in range(1,11)]
-    graphs_by_threshold = build_correlation_graphs_for_thresholds(tickers,thresholds, period='1mo', interval='1d')
+    graphs_by_threshold = build_correlation_graphs(tickers, thresholds, period='1mo', interval='1d')
 
     for threshold in thresholds:
         graph = graphs_by_threshold[threshold]
@@ -52,3 +52,9 @@ def run_full_pipeline(use_sample: bool = True) -> None:
 if __name__ == '__main__':
     # use_sample=False for full S&P 100 (~100 tickers); True for 15 tickers (faster).
     run_full_pipeline(use_sample=True)
+    import python_ta
+    python_ta.check_all(config={
+        'extra-imports': ['compute', 'visualization', 'constants'],
+        'allowed-io': ['run_full_pipeline'],
+        'max-line-length': 120
+    })
