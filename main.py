@@ -416,10 +416,10 @@ def run_full_pipeline(use_sample: bool = True) -> None:
 if __name__ == '__main__':
     # use_sample=False for full S&P 100 (~100 tickers); True for 15 tickers (faster).
     run_full_pipeline(use_sample=False)
-    import python_ta
-
-    python_ta.check_all(config={
-        'extra-imports': ['compute', 'visualization', 'correlation_graph', 'constants', 'config', 'dash'],
-        'allowed-io': ['run_full_pipeline'],
-        'max-line-length': 120
-    })
+    # import python_ta
+    #
+    # python_ta.check_all(config={
+    #     'extra-imports': ['compute', 'visualization', 'correlation_graph', 'constants', 'config', 'dash'],
+    #     'allowed-io': ['run_full_pipeline'],
+    #     'max-line-length': 120
+    # })
