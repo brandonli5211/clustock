@@ -5,7 +5,6 @@
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{graphicx}
-\includegraphics{filename}
 \usepackage{float}
 
 \title{\textbf{TODO: MAKE TITLE}}
@@ -20,7 +19,7 @@
 
 The prediction of the stock market remains one of the most persistent challenges in quantitative finance. Traditional financial analysis relies heavily on the Global Industry Classification Standard (GICS), a hierarchical framework classifying over 43,000 publicly traded companies into 11 broad sectors such as "Technology" and "Energy."\\
 The GICS, however, rests on the assumption that companies within the same category exhibit similar price behaviors, while companies across categories behave differently. In practice, stock market value is driven by geopolitical and socioeconomic events, making consistently reliable predictions exceptionally difficult. A single major economic event can simultaneously affect multiple, seemingly unrelated industries through higher-order dependencies.\\
-\textbf{Our question:} \textbf{To what extent do traditional GICS sectors remain mathematically distinct to one another during periods of high market volatility, and can graph-based detection identify 'pivot stocks' that supposedly connect unrelated industries?}
+\textbf{Our question:} \textbf{To what extent do traditional GICS sectors remain distinct to one another, and can graph-based detection identify 'pivot stocks' that connect supposedly unrelated industries?}
 
 \subsection*{Dataset(s) Used}
 This project's dataset is a subset of Yahoo's financial data\textsuperscript{1}. In particular, we use the S\&P 100 companies when building the correlation graph. When the ticker data is downloaded, it returns in the form of a \texttt{pandas.DataFrame}. For more than one ticker, the columns are arranged as a multi-level index (price fields and ticker symbols); we flatten this in \texttt{download\_tickers} in \texttt{data\_reader.py} using \texttt{DataFrame.stack()} and \texttt{DataFrame.reset\_index()} so that each row is one date and one ticker. The flattened table includes \texttt{Date}, \texttt{Ticker}, and OHLCV columns, where OHLCV stands for the usual daily fields: \textbf{O}pen (first trade price), \textbf{H}igh, \textbf{L}ow, \textbf{C}lose (last trade price), and \textbf{V}olume (shares traded). Table~\ref{tab:flattened-prices} shows the shape of that row-wise table with illustrative values; our program only reads \texttt{Date}, \texttt{Ticker}, and \texttt{Close} when we call \texttt{log\_return\_list()} in \texttt{compute.py} to build the log-return series. Under \texttt{yfinance}'s default \texttt{auto\_adjust=True}, the \texttt{Close} column is adjusted for splits and dividends in line with the library's usual behavior. GICS sectors are not columns in that price table. We call \texttt{get\_sectors\_for\_tickers()} separately, which uses \texttt{Ticker.info.get('sector', 'Unknown')} for each ticker, and we attach those sector strings to nodes in the \texttt{CorrelationGraph}.
@@ -95,13 +94,17 @@ With it, you can zoom in and out and pan around the graph, along with a few othe
 \section*{Changes from Proposal}
 A few changes were made from our original proposal: 
 \begin{itemize}
+    \item Generalized the problem statement. Initially, the project aimed to analyze sector distinctness during periods of high volatility. Upon further discussion, the group concluded that, ideally, the graph would provide meaningful results during any economic period.
     \item Implementing a mode that switches clustering in the graph from the number of edges to grouping the nodes by sector. This was inspired by our TA and provides a different perspective in the analysis.
     \item A slider in the visualization that changes the correlation threshold, influencing the results. This change was also inspired by our TA and made narrowing down very strong correlations very easy without running the program multiple times.
+    \item Instead of using our Breadth-First Search algorithm to simulate a stock crash, the project used it instead to find stocks that have a strong correlation across multiple GICS sectors.
+    \item The additional data upon hovering over each node consists of only the ticker name, sector, and number of neighbours. Furthermore, a leaderboard was added to showcase the five tickers with the most neighbours. Our group decided that data such as the log return was irrelevant to the representation when the graph is focused solely on correlations, so we aimed to keep the data informative yet presentable.
     \item Changing the size of a node based on the number of correlations. This way, the graph felt more dynamic and it was easier to pinpoint "important" nodes within the network.
 \end{itemize}
 
 \section*{Discussion}
-This project set out to determine whether or not GICS-defined sectors accurately reflect the behavior of stocks measured by price correlation. To investigate, a correlation graph was constructed with the SP100 as the ticker set, with one month of historical prices retrieved at daily intervals.\\
+This project set out to determine whether or not GICS-defined sectors accurately reflect the behavior of stocks measured by price correlation. To investigate, a correlation graph was constructed with the S\&P 100 as the ticker set, with one month of historical prices retrieved at daily intervals.\\
+Overall, the results were able to answer our question: Through pivot candidates, analyzing different thresholds, and graph node clustering by sector, we were able to identify strong correlations between sectors.
 NEXT:\\
 - Results were good - able to do so with the slider and finding strong correlations via higher thresholds\\
 - limitations - runtime, relatively small interval\\
