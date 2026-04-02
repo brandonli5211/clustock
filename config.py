@@ -5,7 +5,8 @@ Configuration file for the plotly visualization
 
 # https://plotly.com/python/configuration-options/
 CONFIG = {
-    'scrollZoom': True
+    'scrollZoom': True,
+    'dragmode': 'pan'
 }
 
 

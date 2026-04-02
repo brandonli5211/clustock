@@ -181,6 +181,7 @@ def register_callbacks(app: Dash,
         else:
             fig = figures_by_threshold[view_option][selected_threshold]
 
+        fig.update_layout(dragmode='pan')
         return fig, most_connections_panel(graph)
 
     @app.callback(
@@ -273,6 +274,7 @@ def run_full_pipeline(use_sample: bool = True) -> None:
 
     default_threshold = 0.7
     visualization_figure = figures_by_threshold['Standard'][default_threshold]
+    visualization_figure.update_layout(dragmode='pan')
     app.layout = html.Div([
         html.Div([
             dcc.Graph(
@@ -410,7 +412,7 @@ def run_full_pipeline(use_sample: bool = True) -> None:
         })
     ])
     register_callbacks(app, graphs_by_threshold, figures_by_threshold, position_views)
-    app.run(debug=True)
+    app.run(debug=False)
 
 
 if __name__ == '__main__':
