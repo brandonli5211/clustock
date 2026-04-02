@@ -86,48 +86,11 @@ def create_edges_in_graph(graph: CorrelationGraph,
                 graph.add_edge(tickers[i], tickers[j], r)
 
 
-# def build_correlation_graph(
-#     tickers: set[str],
-#     period: Optional[str] = None,
-#     date_range: Optional[tuple[str, str]] = None,
-#     interval: Optional[str] = None,
-#     threshold: float
-# ) -> CorrelationGraph:
-#     """Build weighted undirected graph from price data.
-#
-#     Nodes = stocks (ticker, sector). Edges = pairs with |correlation| > threshold.
-#     Use Adj Close (or Close) for log returns, then Pearson correlation between pairs.
-#
-#     Preconditions:
-#     - All tickers in tickers are valid yfinance ticker symbols.
-#     - (period is None) != (date_range is None)
-#     - if date_range is not None, len(date_range) == 2, date_range[0] is the start date, date_range[1] is the end date
-#     - 0 <= threshold <= 1
-#     """
-#     g = CorrelationGraph()
-#     start, end = date_range if date_range else (None, None)
-#     df = download_tickers(tickers, period=period, start=start, end=end, interval=interval)
-#
-#     # -------------------- Add tickers as nodes in the graph
-#     for ticker, sector in get_sectors_for_tickers(tickers).items():  # Key-value pair is ticker: sector
-#         g.add_node(ticker, sector)
-#
-#     # -------------------- Add edges to graph if necessary
-#     # Calculating log returns for each ticker. This becomes a dictionary of {ticker: [log returns]}
-#     log_returns = log_return_list(df)
-#     # Calculate Pearson correlation coefficient between each vertex in the graph.
-#     # Then, add edges when the coefficient is above threshold.
-#     create_edges_in_graph(g, log_returns, g.get_all_tickers(), threshold)
-#
-#     return g
-
-
-def build_correlation_graphs_for_thresholds(tickers: set[str],
-                                            thresholds: list[float],
-                                            period: Optional[str] = None,
-                                            date_range: Optional[tuple[str, str]] = None,
-                                            interval: Optional[str] = None) -> dict[float, CorrelationGraph]:
-
+def build_correlation_graphs(tickers: set[str],
+                             thresholds: list[float],
+                             period: Optional[str] = None,
+                             date_range: Optional[tuple[str, str]] = None,
+                             interval: Optional[str] = None) -> dict[float, CorrelationGraph]:
     """build one correlation graph per threshold using a single downloaded dataset."""
 
     start, end = date_range if date_range else (None, None)
@@ -136,12 +99,11 @@ def build_correlation_graphs_for_thresholds(tickers: set[str],
     log_returns = log_return_list(df)
 
     graphs = {}
-    ordered_tickers = list(sector_for_tick.keys())
     for threshold in thresholds:
         graph = CorrelationGraph()
         for ticker, sector in sector_for_tick.items():
             graph.add_node(ticker, sector)
-        create_edges_in_graph(graph, log_returns, ordered_tickers, threshold)
+        create_edges_in_graph(graph, log_returns, list(sector_for_tick.keys()), threshold)
         graphs[threshold] = graph
 
     return graphs
@@ -149,9 +111,12 @@ def build_correlation_graphs_for_thresholds(tickers: set[str],
 
 if __name__ == '__main__':
     import doctest
+
     doctest.testmod()
-    # import python_ta
-    # python_ta.check_all(config={
-    #     'max-line-length': 120,
-    #     'extra-imports': ['pandas', 'correlation_graph', 'data_reader', 'constants', 'math'],
-    # })
+    import python_ta
+
+    python_ta.check_all(config={
+        'extra-imports': ['typing', 'math', 'pandas', 'correlation_graph', 'data_reader'],
+        'allowed-io': [],
+        'max-line-length': 120
+    })
