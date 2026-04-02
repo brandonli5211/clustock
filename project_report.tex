@@ -7,7 +7,7 @@
 \usepackage{graphicx}
 \usepackage{float}
 
-\title{\textbf{TODO: MAKE TITLE}}
+\title{\textbf{Clustock: Exploring Stock Sectors Correlation}}
 \author{Tyler Christopher Lin, Brandon Zento Li, Houssam Kadri, Frank Huang}
 \date{\today}
 
@@ -53,13 +53,23 @@ We also implement the crash simulation and pivot-candidate ideas from our propos
 \section*{Visualization Overview}
 TODO: Explain how the visualization works, as well as the libraries involved to accomplish the visualization.
 
+We used Plotly's \texttt{dash} library to create a Flask app built around our graph, simplifying the process of adding inputs by using \texttt{dash core components}.
+
+We split our visualization into 3 view options: \textbf{Standard, Sector, and Community}. \\
+
+Standard view uses \texttt{NetworkX.spring\_layout}, which "[treats] edges as springs holding nodes close, while treating nodes as repelling objects"\textsuperscript{9}. This visually groups stocks into clusters where nodes with edge connections to one another would be closer together, and nodes that did not have connections would be repelled outwards to the edges. However, this did not create a clear viewing experience because most of the nodes clustered into 1 large group with only a few small groups and standalone nodes on the outside.
+
+Sector view groups the nodes into clusters based on their GICS sector through a clever layout trick taken from the NetworkX documentation.\textsuperscript{10}. We create a \texttt{nx.cycle\_graph} with length equal to the number of sectors. This creates a circle-like graph in which all the nodes are contained in a singular cycle. The positions of these nodes are then used as the centers for spring layouts of subgraphs representing each sector. Thus, all nodes of the same sector are grouped in close proximity.
+
+Community view uses \texttt{nx.greedy\_modularity\_communities} to group the stocks into graph communities, where the number of communities matches the number of GICS sectors in the graph. Communities are often defined as groups of vertices where the density in that group is higher than the average density in the graph. \textsuperscript{11}. Community view takes the same trick from Sector view, grouping the stocks proximally into the clusters that the NetworkX algorithm finds. Essentially, if you asked the algorithm to group the full stock dataset into 11 sectors instead of the 11 GIC sectors present, this view shows how it would form groupings.
+
 
 \section*{Running the Program}
 The provided file \texttt{requirements.txt} provides all the required modules to run the program. Note that when installing \texttt{yfinance-cache}, an underscore must be used instead of a hyphen, i.e. \texttt{pip install yfinance\_cache}.\\
 Because we are retrieving data through the Yahoo Finance API, this project does not rely on a static dataset, as mentioned previously. However, the project uses the S\&P 100 tickers (as of 2024-2025) and their price data from March 2nd, 2026 to March 31st, 2026 as the project's dataset, provided in \texttt{py-yfinance-cache.zip}. The data must be extracted into \texttt{C:\textbackslash Users\textbackslash <Username>\textbackslash AppData\textbackslash Local\textbackslash yfinance\_cache} for the data to load in the program. When \texttt{main.py} is run, it takes the tickers from \texttt{constants.py} and retrieves the corresponding historical price data directly from the Yahoo Finance API. If the data already exists in the zip file, then it will be retrieved from there, significantly decreasing the retrieval time.\\
 In the unlikely chance that the download fails, in the function call on line 36 of \texttt{main.py}, please replace the arguments with \texttt{tickers, thresholds, date\_range=('2026-03-02', '2026-04-01'), interval='1d'} to retrieve exclusively the data included in the zip file.\\
 When \texttt{main.py} is run and you are not using data from the provided zip file, you may notice that the result will return slowly, which is due to the nature of \texttt{yfinance\_cache.download()}. With a larger sample, it will take some time to download each ticker's data before creating the graph.\\
-The following shows something similar to the initial appearance of the graph. Hovering the mouse over a node shows the node's ticker, GICS sector, and the number of neighbors. On the right hand side of the screen is a legend, as well as a ranking of the nodes with the most amount of connections. The larger a node, the more neighbors it has. In this mode, nodes are clustered by the number of correlations with other nodes. 
+The following shows something similar to the initial appearance of the graph. Hovering the mouse over a node shows the node's ticker, GICS sector, and the number of neighbors. On the right hand side of the screen is a legend, as well as a ranking of the nodes with the most amount of connections. The larger a node, the more neighbors it has. In this mode, nodes are clustered by the number of correlations with other nodes.
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.5\linewidth]{image.png}
@@ -82,7 +92,7 @@ On the top right corner of the site, there is the Plotly Modebar:
 \end{figure}
 With it, you can zoom in and out and pan around the graph, along with a few other actions.
 \section*{Changes from Proposal}
-A few changes were made from our original proposal: 
+A few changes were made from our original proposal:
 \begin{itemize}
     \item Implementing a mode that switches clustering in the graph from the number of edges to grouping the nodes by sector. This was inspired by our TA and provides a different perspective in the analysis.
     \item A slider in the visualization that changes the correlation threshold, influencing the results. This change was also inspired by our TA and made narrowing down very strong correlations very easy without running the program multiple times.
@@ -107,6 +117,9 @@ NEXT:\\
     \item Plotly Technologies Inc. (2024). \textit{Interactive Graphing Library for Python}. \url{https://plotly.com/python/}
     \item MSCI and S\&P Dow Jones Indices. (2023). \textit{GICS Sector Methodology Overview}.
     \item \textit{yfinance-cache} (Python package). Caching wrapper for \texttt{yfinance}. \url{https://pypi.org/project/yfinance-cache/}
+    \item  “Spring\_layout — NetworkX 2.8.7 Documentation.” \textit{Networkx.org}, \url{networkx.org/documentation/stable/reference/generated/networkx.drawing.layout.spring_layout.html}.
+    \item “Cluster Layout — NetworkX 3.6.1 Documentation.” \textit{Networkx.org, 2025}, \url{networkx.org/documentation/stable/auto_examples/drawing/plot_clusters.html}.
+    \item Fortunato, Santo, and Claudio Castellano. “Community Structure in Graphs.” Springer EBooks, 1 Jan. 2012, pp. 490–512, \url{https://doi.org/10.1007/978-1-4614-1800-9_33}.
 \end{enumerate}
 
 
