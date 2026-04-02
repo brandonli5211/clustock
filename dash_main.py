@@ -4,7 +4,7 @@ Entry point: download prices, build the correlation graph, open the interactive 
 """
 from __future__ import annotations
 
-from compute import build_correlation_graphs_for_thresholds
+from compute import build_correlation_graphs
 from visualization import SECTOR_COLORS, create_graph_figure, get_positions, sector_to_color_map, top_neighbour_stocks, \
     get_sector_oriented_positions, \
     get_community_positions
@@ -116,9 +116,9 @@ def run_full_pipeline(use_sample: bool = True) -> None:
     """
     tickers = set(SP100_TICKERS[:15]) if use_sample else set(SP100_TICKERS)
     print('Building correlation graph for', len(tickers), 'tickers...')
-    thresholds = [x / 10 for x in range(1,11)]
-    graphs_by_threshold = build_correlation_graphs_for_thresholds(tickers, thresholds, period='1mo', interval='1d')
-    complete_graph = build_correlation_graphs_for_thresholds(tickers, [0], period='1mo', interval='1d')[0]
+    thresholds = [x / 10 for x in range(1, 11)]
+    graphs_by_threshold = build_correlation_graphs(tickers, thresholds, period='1mo', interval='1d')
+    complete_graph = build_correlation_graphs(tickers, [0], period='1mo', interval='1d')[0]
     positions = get_positions(graphs_by_threshold[thresholds[0]])
     sector_oriented_positions = get_sector_oriented_positions(graphs_by_threshold[thresholds[0]])
     communinity_positions = get_community_positions(graphs_by_threshold[thresholds[0]])
@@ -217,7 +217,7 @@ def run_full_pipeline(use_sample: bool = True) -> None:
                 ),
             ], style={
                 'position': 'absolute',
-                'bottom': '20px',
+                'bottom': '100px',
                 'right': '30px',
                 'width': '180px',
                 'padding': '20px',
@@ -417,3 +417,9 @@ def run_full_pipeline(use_sample: bool = True) -> None:
 if __name__ == '__main__':
     # use_sample=False for full S&P 100 (~100 tickers); True for 15 tickers (faster).
     run_full_pipeline(use_sample=False)
+    import python_ta
+    python_ta.check_all(config={
+        'extra-imports': ['compute', 'visualization', 'correlation_graph', 'constants', 'config', 'dash'],
+        'allowed-io': ['run_full_pipeline'],
+        'max-line-length': 120
+    })
