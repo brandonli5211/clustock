@@ -47,3 +47,12 @@ BFS_DEPTH = 2
 # - 'linear' keeps size tied directly to degree
 # - 'relative' scales size relative to the largest degree in the current graph
 NODE_SIZE_MODE = 'relative'
+
+
+if __name__ == '__main__':
+    import python_ta
+    python_ta.check_all(config={
+        'extra-imports': [],
+        'allowed-io': [],
+        'max-line-length': 120
+    })
