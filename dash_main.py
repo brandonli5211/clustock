@@ -221,7 +221,7 @@ def run_full_pipeline(use_sample: bool = True) -> None:
             }
         ),
         html.Div([
-            html.Div("Graph Densities", style={'fontWeight': '600', 'marginBottom': '4px'}),
+            html.Div("Densities of Sector Subgraphs", style={'fontWeight': '600', 'marginBottom': '4px'}),
             html.Div(
                 children=[
                     f"Density of Full Graph: {round(graphs_by_threshold[default_threshold].density(), 5)}",
