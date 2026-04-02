@@ -161,22 +161,9 @@ def run_full_pipeline(use_sample: bool = True) -> None:
                 dcc.RadioItems(
                     ['Standard', 'Sector', 'Community'],
                     'Standard',
-                    id="view-menu"
-                )
-            ], style={
-                'position': 'absolute',
-                'top': '270px',
-                'right': '30px',
-                'width': '180px',
-                'padding': '20px',
-                'boxSizing': 'border-box',
-                'backgroundColor': 'rgba(255, 255, 255, 0.88)',
-                'border': '1px solid #C9D4E6',
-                'fontFamily': '"Open Sans", verdana, arial, sans-serif',
-                'fontSize': '12px',
-                'color': '#2a3f5f'
-            }),
-            html.Div([
+                    id="view-menu",
+                    style={'marginBottom': '12px'}
+                ),
                 html.Div("Pivot Candidates", style={'fontWeight': '600', 'marginBottom': '8px'}),
                 dcc.Dropdown(
                     id="pivot_start_ticker",

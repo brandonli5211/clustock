@@ -75,8 +75,9 @@ def get_sector_oriented_positions(cg: CorrelationGraph) -> dict[str,tuple[float,
     Taken from https://networkx.org/documentation/stable/auto_examples/drawing/plot_clusters.html
     """
     graph = graph_to_networkx(cg)
+    sector_order = ordered_sectors([cg.get_sector(ticker) for ticker in cg.get_all_tickers()])
 
-    supergraph = nx.cycle_graph(len(SECTOR_ORDER))
+    supergraph = nx.cycle_graph(len(sector_order))
     superpos = nx.spring_layout(supergraph, scale=2, seed=429)
 
     # Supernodes are used as centers for the new node clusters
@@ -84,13 +85,13 @@ def get_sector_oriented_positions(cg: CorrelationGraph) -> dict[str,tuple[float,
     pos = {}
 
     nodes_by_sector = {}
-    for sector in SECTOR_ORDER:
-        nodes_by_sector[sector] = []
-
     for ticker in cg.get_all_tickers():
-        nodes_by_sector[cg.get_sector(ticker)].append(ticker)
+        sector = cg.get_sector(ticker)
+        if sector not in nodes_by_sector:
+            nodes_by_sector[sector] = []
+        nodes_by_sector[sector].append(ticker)
 
-    for center, sector in zip(centers, SECTOR_ORDER):
+    for center, sector in zip(centers, sector_order):
         pos.update(nx.spring_layout(nx.subgraph(graph, frozenset(nodes_by_sector[sector])), center=center, seed=1430))
 
     return pos
