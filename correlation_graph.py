@@ -6,7 +6,8 @@ edges store Pearson correlation weights above a threshold.
 
 from __future__ import annotations
 
-from constants import BFS_DEPTH
+
+from constants import BFS_DEPTH, SECTORS
 from collections import deque
 
 
@@ -68,6 +69,18 @@ class CorrelationGraph:
             return 0.0
         edge_count = sum(len(v.neighbours) for v in self._vertices.values()) // 2
         return 2 * edge_count / (n * (n - 1))
+
+    def subgraph(self, tickers: list[str]) -> CorrelationGraph:
+        """Return a correlation subgraph of the original graph consisting of only nodes and edges included in
+        the given tickers list. Edges between nodes contained in the subgraph and outside nodes are not preserved"""
+
+        subgraph = CorrelationGraph()
+        for ticker in tickers:
+            subgraph.add_node(ticker, self.get_sector(ticker))
+            for neighbour in self.get_neighbours(ticker):
+                subgraph.add_edge(ticker, neighbour, self.get_neighbours(ticker)[neighbour])
+
+        return subgraph
 
     def bfs_crash_simulation(self, start_ticker: str, max_depth: int = BFS_DEPTH) -> dict[int, set[str]]:
         """Breadth-first search from start_ticker along correlation edges.
@@ -138,6 +151,27 @@ class CorrelationGraph:
 
         # Highest sector_diversity first (sort by the integer, largest first).
         return sorted(candidates, key=lambda pair: pair[1], reverse=True)
+
+    def sector_density(self, sector: str) -> float:
+        """Return the density of the isolated subgraph of the given sector"""
+
+        tickers_in_sector = []
+
+        for ticker in self.get_all_tickers():
+            if self.get_sector(ticker) == sector:
+                tickers_in_sector.append(ticker)
+
+        sector_subgraph = self.subgraph(tickers_in_sector)
+        return sector_subgraph.density()
+
+    def get_ordered_sector_densities(self, limit: int = 11) -> list[tuple[str, int]]:
+        """Return list or ordered tuples mapping (sector, density) sorted from highest to least density"""
+        densities = []
+        for sector in SECTORS:
+            density = self.sector_density(sector)
+            densities.append((sector, density))
+        densities.sort(key=lambda pair: (-pair[1], pair[0]))
+        return densities[:limit]
 
 
 if __name__ == '__main__':

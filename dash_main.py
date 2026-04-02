@@ -2,13 +2,14 @@
 
 Entry point: download prices, build the correlation graph, open the interactive visualization.
 """
-
 from __future__ import annotations
 
 from compute import build_correlation_graphs_for_thresholds
-from visualization import create_graph_figure, get_positions, top_neighbour_stocks, get_sector_oriented_positions, \
+from visualization import SECTOR_COLORS, create_graph_figure, get_positions, sector_to_color_map, top_neighbour_stocks, \
+    get_sector_oriented_positions, \
     get_community_positions
-from constants import SP100_TICKERS
+from correlation_graph import CorrelationGraph
+from constants import SP100_TICKERS, SECTORS
 from config import CONFIG
 
 from dash import Dash, html, dcc, callback, Output, Input, ALL, ctx, no_update
@@ -28,10 +29,9 @@ def edge_sign_counts(graph) -> tuple[int, int]:
     return positive, negative
 
 
-def most_connections_panel(graph) -> html.Div:
+def most_connections_panel(graph: CorrelationGraph) -> html.Div:
     """Return a Dash panel listing the most connected stocks in the current graph."""
     top_stocks = top_neighbour_stocks(graph)
-    from visualization import sector_to_color_map
     sector_colors = sector_to_color_map([graph.get_sector(ticker) for ticker in graph.get_all_tickers()])
     if not top_stocks:
         return html.Div("No connected stocks")
@@ -47,6 +47,28 @@ def most_connections_panel(graph) -> html.Div:
                 )
             ])
             for index, (ticker, count) in enumerate(top_stocks, start=1)
+        ])
+    ], style={
+        'marginTop': '12px',
+        'padding': '6px 8px',
+        'border': '1px solid #C9D4E6',
+        'backgroundColor': 'rgba(255, 255, 255, 0.88)'
+    })
+
+def density_leaderboard_panel(graph: CorrelationGraph) -> html.Div:
+    """Return panel containing the rankings for graph density between sectors"""
+    densities = graph.get_ordered_sector_densities()
+    return html.Div([
+        html.Div("Densities:", style={'fontWeight': '600', 'marginBottom': '4px'}),
+        html.Div([
+            html.Div([
+                html.Span(f'{index}. {sector} ({round(density, 5)})'),
+                html.Span(
+                    ' ●',
+                    style= {'color': SECTOR_COLORS[sector]}
+                )
+            ])
+            for index, (sector, density) in enumerate(densities, start=1)
         ])
     ], style={
         'marginTop': '12px',
@@ -211,6 +233,30 @@ def run_full_pipeline(use_sample: bool = True) -> None:
                 for x in range(1, 11)
             }
         ),
+        html.Div([
+            html.Div("Graph Densities", style={'fontWeight': '600', 'marginBottom': '4px'}),
+            html.Div(
+                children=[
+                    f"Density of Full Graph: {round(graphs_by_threshold[default_threshold].density(), 5)}",
+                    density_leaderboard_panel(graphs_by_threshold[default_threshold])
+                ],
+                id='density-leaderboard'
+            ),
+        ], style={
+                # 'position': 'absolute',
+                # 'top': '400px',
+                # 'right': '30px',
+                # 'width': '180px',
+                'marginTop': '20px',
+                'padding': '20px',
+                'boxSizing': 'border-box',
+                'backgroundColor': 'rgba(255, 255, 255, 0.88)',
+                'border': '1px solid #C9D4E6',
+                'fontFamily': '"Open Sans", verdana, arial, sans-serif',
+                'fontSize': '12px',
+                'color': '#2a3f5f'
+            }
+        )
     ])
 
     # Input Handling
@@ -291,6 +337,16 @@ def run_full_pipeline(use_sample: bool = True) -> None:
             ])
         else:
             return ""
+
+    @callback(
+        Output('density-leaderboard', 'children'),
+        Input('threshold-slider', 'value'),
+    )
+    def update_density_leaderboard(selected_threshold):
+        return [
+            f"Density of Full Graph: {round(graphs_by_threshold[selected_threshold].density(), 5)}",
+            density_leaderboard_panel(graphs_by_threshold[selected_threshold])
+        ]
 
     @callback(
         Output('pivot_start_ticker', 'value'),

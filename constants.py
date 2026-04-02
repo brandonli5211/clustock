@@ -20,6 +20,20 @@ SP100_TICKERS = [
     'AON', 'ICE', 'FIS', 'AIG', 'MET', 'GM', 'USB', 'PNC', 'FCX',
 ]
 
+SECTORS = [
+    'Consumer Cyclical',
+    'Utilities',
+    'Communication Services',
+    'Consumer Defensive',
+    'Healthcare',
+    'Financial Services',
+    'Technology',
+    'Real Estate',
+    'Industrials',
+    'Energy',
+    'Basic Materials'
+]
+
 # Period definitions for Stable vs Volatile comparison
 # Stable: Calm market period (e.g., 2023 recovery)
 # Volatile: High volatility period (e.g., 2022 bear market, or COVID March 2020)

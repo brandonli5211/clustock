@@ -92,9 +92,7 @@ def get_sector_oriented_positions(cg: CorrelationGraph) -> dict[str,tuple[float,
 
     for center, sector in zip(centers, SECTOR_ORDER):
         pos.update(nx.spring_layout(nx.subgraph(graph, frozenset(nodes_by_sector[sector])), center=center, seed=1430))
-        print(center, sector)
 
-    print(pos)
     return pos
 
 
