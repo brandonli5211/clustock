@@ -5,6 +5,7 @@
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\includegraphics{filename}
 \usepackage{float}
 
 \title{\textbf{TODO: MAKE TITLE}}
@@ -59,25 +60,35 @@ The provided file \texttt{requirements.txt} provides all the required modules to
 Because we are retrieving data through the Yahoo Finance API, this project does not rely on a static dataset, as mentioned previously. However, the project uses the S\&P 100 tickers (as of 2024-2025) and their price data from March 2nd, 2026 to March 31st, 2026 as the project's dataset, provided in \texttt{py-yfinance-cache.zip}. The data must be extracted into \texttt{C:\textbackslash Users\textbackslash <Username>\textbackslash AppData\textbackslash Local\textbackslash yfinance\_cache} for the data to load in the program. When \texttt{main.py} is run, it takes the tickers from \texttt{constants.py} and retrieves the corresponding historical price data directly from the Yahoo Finance API. If the data already exists in the zip file, then it will be retrieved from there, significantly decreasing the retrieval time.\\
 In the unlikely chance that the download fails, in the function call on line 36 of \texttt{main.py}, please replace the arguments with \texttt{tickers, thresholds, date\_range=('2026-03-02', '2026-04-01'), interval='1d'} to retrieve exclusively the data included in the zip file.\\
 When \texttt{main.py} is run and you are not using data from the provided zip file, you may notice that the result will return slowly, which is due to the nature of \texttt{yfinance\_cache.download()}. With a larger sample, it will take some time to download each ticker's data before creating the graph.\\
-The following shows something similar to the initial appearance of the graph. Hovering the mouse over a node shows the node's ticker, GICS sector, and the number of neighbors. On the right hand side of the screen is a legend, as well as a ranking of the nodes with the most amount of connections. The larger a node, the more neighbors it has. In this mode, nodes are clustered by the number of correlations with other nodes. 
+The program visualization requires self-hosting. When the \texttt{main.py} is run, please follow the hyperlink that shows up after some time. This will lead to the opening of the graph visualization.\\
+The following shows something similar to the initial appearance of the graph. Hovering the mouse over a node shows the node's ticker, GICS sector, and the number of neighbors. The larger a node, the more neighbors it has. In this mode, nodes are clustered by the number of correlations with other nodes. On the right hand side of the screen is a toggleable legend which hides the corresponding symbol on the graph upon clicking, as well as a choice of node grouping and a ranking of the nodes with the most connections. The bottom contains a slider to set the threshold level, and scrolling down will reveal additional information about the graph such as graph density and more detailed Pearson coefficient data for each sector.
+\begin{figure}[H]
+        \centering
+        \includegraphics[width=0.9\linewidth]{image1.png}
+        \caption{An image of what the graph could look like upon opening the site.}
+        \label{fig:placeholder}
+    \end{figure}
+As mentioned previously, using the slider at the bottom will show only the edges whose absolute values exceed the threshold. The corresponding information changes along with the graph.
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.5\linewidth]{image.png}
-    \caption{Enter Caption}
+    \includegraphics[width=0.9\linewidth]{image2.png}
+    \caption{Stock Network Correlation Graph - 0.5 Threshold}
     \label{fig:placeholder}
 \end{figure}
-Using the slider at the bottom of the screen will show only the edges whose absolute values exceed the threshold.
+On the right below the legend you will find \texttt{View Options} and \texttt{Pivot Candidates}.\\
+First, \texttt{View Options} allows different graph orientations, as mentioned in the Visualization Overview, may aid in analysis. Click on the button to the corresponding viewing option to toggle it.\\
+Then, \texttt{Pivot Candidates} allows you to select any node in the graph as a target stock, highlighted in yellow. Typing or selecting a valid node name from the search bar will show that target's pivot candidates, highlighted in purple. Furthermore, once a target stock is selected, you can select any of its candidates to become your new target by clicking on any of the candidates listed below the search bar. The pivot candidates menu can always be exited by clicking the 'X' icon in the menu's search bar.
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.5\linewidth]{image2.png}
-    \caption{Stock Network Correlation Graph - 0.7 Threshold}
+    \includegraphics[width=0.9\linewidth]{image3.png}
+    \caption{Correlation Graph with AMZN as its target stock.}
     \label{fig:placeholder}
 \end{figure}
-On the top right corner of the site, there is the Plotly Modebar:
+Finally, on the top right corner of the site, there is the Plotly Modebar:
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.5\linewidth]{image3.png}
-    \caption{The Plotly Modebar, circled in red, is used for navigation.}
+    \includegraphics[width=0.9\linewidth]{image4.png}
+    \caption{The Plotly Modebar, outlined in red.}
     \label{fig:placeholder}
 \end{figure}
 With it, you can zoom in and out and pan around the graph, along with a few other actions.
