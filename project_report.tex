@@ -7,7 +7,7 @@
 \usepackage{graphicx}
 \usepackage{float}
 
-\title{\textbf{Clustock: Exploring Stock Sectors Correlation}}
+\title{\textbf{The Shape of Stocks: Exploring the GICS Classification Rigidity through Stock Correlations}}
 \author{Tyler Christopher Lin, Brandon Zento Li, Houssam Kadri, Frank Huang}
 \date{\today}
 
@@ -53,16 +53,6 @@ We also implement the crash simulation and pivot-candidate ideas from our propos
 \section*{Visualization Overview}
 TODO: Explain how the visualization works, as well as the libraries involved to accomplish the visualization.
 
-We used Plotly's \texttt{dash} library to create a Flask app built around our graph, simplifying the process of adding inputs by using \texttt{dash core components}.
-
-We split our visualization into 3 view options: \textbf{Standard, Sector, and Community}. \\
-
-Standard view uses \texttt{NetworkX.spring\_layout}, which "[treats] edges as springs holding nodes close, while treating nodes as repelling objects"\textsuperscript{9}. This visually groups stocks into clusters where nodes with edge connections to one another would be closer together, and nodes that did not have connections would be repelled outwards to the edges. However, this did not create a clear viewing experience because most of the nodes clustered into 1 large group with only a few small groups and standalone nodes on the outside.
-
-Sector view groups the nodes into clusters based on their GICS sector through a clever layout trick taken from the NetworkX documentation.\textsuperscript{10}. We create a \texttt{nx.cycle\_graph} with length equal to the number of sectors. This creates a circle-like graph in which all the nodes are contained in a singular cycle. The positions of these nodes are then used as the centers for spring layouts of subgraphs representing each sector. Thus, all nodes of the same sector are grouped in close proximity.
-
-Community view uses \texttt{nx.greedy\_modularity\_communities} to group the stocks into graph communities, where the number of communities matches the number of GICS sectors in the graph. Communities are often defined as groups of vertices where the density in that group is higher than the average density in the graph. \textsuperscript{11}. Community view takes the same trick from Sector view, grouping the stocks proximally into the clusters that the NetworkX algorithm finds. Essentially, if you asked the algorithm to group the full stock dataset into 11 sectors instead of the 11 GIC sectors present, this view shows how it would form groupings.
-
 
 \section*{Running the Program}
 The provided file \texttt{requirements.txt} provides all the required modules to run the program. Note that when installing \texttt{yfinance-cache}, an underscore must be used instead of a hyphen, i.e. \texttt{pip install yfinance\_cache}.\\
@@ -78,7 +68,6 @@ The following shows something similar to the initial appearance of the graph. Ho
         \label{fig:placeholder}
     \end{figure}
 As mentioned previously, using the slider at the bottom will show only the edges whose absolute values exceed the threshold. The corresponding information changes along with the graph.
-The following shows something similar to the initial appearance of the graph. Hovering the mouse over a node shows the node's ticker, GICS sector, and the number of neighbors. On the right hand side of the screen is a legend, as well as a ranking of the nodes with the most amount of connections. The larger a node, the more neighbors it has. In this mode, nodes are clustered by the number of correlations with other nodes.
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\linewidth]{image2.png}
@@ -103,7 +92,7 @@ Finally, on the top right corner of the site, there is the Plotly Modebar:
 \end{figure}
 With it, you can zoom in and out and pan around the graph, along with a few other actions.
 \section*{Changes from Proposal}
-A few changes were made from our original proposal:
+A few changes were made from our original proposal: 
 \begin{itemize}
     \item Generalized the problem statement. Initially, the project aimed to analyze sector distinctness during periods of high volatility. Upon further discussion, the group concluded that, ideally, the graph would provide meaningful results during any economic period.
     \item Implementing a mode that switches clustering in the graph from the number of edges to grouping the nodes by sector. This was inspired by our TA and provides a different perspective in the analysis.
@@ -114,12 +103,22 @@ A few changes were made from our original proposal:
 \end{itemize}
 
 \section*{Discussion}
-This project set out to determine whether or not GICS-defined sectors accurately reflect the behavior of stocks measured by price correlation. To investigate, a correlation graph was constructed with the S\&P 100 as the ticker set, with one month of historical prices retrieved at daily intervals.\\
-Overall, the results were able to answer our question: Through pivot candidates, analyzing different thresholds, and graph node clustering by sector, we were able to identify strong correlations between sectors.
-NEXT:\\
-- Results were good - able to do so with the slider and finding strong correlations via higher thresholds\\
-- limitations - runtime, relatively small interval\\
-- further steps: larger interval, more stocks
+This project set out to determine whether or not GICS-defined sectors accurately reflect the behavior of stocks measured by price correlation. To investigate, a correlation graph was constructed with the S\&P-100 as the ticker set, with one month of historical prices retrieved at daily intervals.\\\\
+
+At low correlation thresholds (0.5-0.6), results showed many edges within and across sectors, suggesting a relatively connected stock market, and that a node being a part of a sector is not the sole factor that determines its price behaviour. In other words, certain stocks across sectors share a strong enough price behaviour correlation that is not reflected by the standards of GICS sectors.\\\\
+
+As the threshold increases (0.7 - 0.8), the network becomes much sparser and more interpretable. Many weak cross-sector correlations disappeared, while stronger correlations remained intact; the same pattern observed at lower thresholds, however, remained. Some stocks maintained strong connections across sectors as seen through the sector-organised layout, while others fragmented or kept only a few strong links. This helps answer our research question: traditional sectors do retain some distinctness, but that distinctness becomes more visible only when correlations are filtered out. At lower thresholds, shared connections across the market blur lines between the GICS structure.\\\\
+
+For example, at a threshold of 0.8, the full graph is still extremely sparse with very low density, while most stocks are isolated or only weakly connected, a select few stocks remain meaningfully connected. Furthermore, when using the “pivot-candidate” search on many of the remaining stocks, we notice that some of them still appear to influence the structure of the network beyond its own sector, even when there is no direct correlation edge remaining between them and certain other stocks.\\\\
+
+We had implemented a threshold slider that goes from 0.1 to 1.0, but we discovered that only the thresholds mentioned above demonstrated significant results. Anything below a 0.5 threshold had too many edges and was therefore too dense to distinguish any pattern, while any threshold above 0.8 became too sparse, as there were too few edges to draw any meaningful conclusion. This made the 0.5 - 0.8 threshold range the optimal balance between visibility and interpretability.\\\\
+
+Through pivot candidates, analyzing different thresholds, and graph node clustering by sector, we were able to identify strong correlations between sectors, implying that the GICS categorization is not absolute.\\\\
+
+While the project was able to adequately answer our inquiry, it was not without limitations. Our first problem was with the nature of the Yahoo Finance API: downloading too much data too quickly from Yahoo Finance at once causes the site to rate-limit and block the IP address. This is what ultimately led us to use our project’s dataset, which is the S\&P 100 (from 2024-2025), a mere 100 stocks out of the tens of thousands of stocks on Yahoo Finance. We also only retrieved data over one month, which is insufficient in large scale analysis. Despite this, the runtime of the program was still noticeably slow; with a larger dataset and a longer time period, the runtime would exponentially increase. Some of our functions, like the calculation for the average absolute value of Pearson coefficients in a graph run in O(N\^2), meaning that our program would only run at reasonable speeds for up to about 10,000 input stocks. Above all, our graph is only able to analyze stocks by their Pearson correlation coefficients, which represent linear correlations, effectively overshadowing non-linear correlations between stocks. \\\\
+
+Overall, the results were able to answer our question: Many edges appear to be between sectors, which follows the principle behind GICS sectors. We firmly believe, however, that our project still has a long way to go. First, we could implement an algorithm that uses a more sophisticated measure than the Pearson coefficient in order to see a more complete picture of the correlation between certain stocks. Second, we could try to further optimize our code to be able to handle a much larger dataset over a longer time period with a reasonable runtime. While this will not solve the rate-limiting issue, an algorithm can be developed to download a certain number of ticker data over certain intervals.
+
 
 
 \section*{References}
@@ -132,9 +131,6 @@ NEXT:\\
     \item Plotly Technologies Inc. (2024). \textit{Interactive Graphing Library for Python}. \url{https://plotly.com/python/}
     \item MSCI and S\&P Dow Jones Indices. (2023). \textit{GICS Sector Methodology Overview}.
     \item \textit{yfinance-cache} (Python package). Caching wrapper for \texttt{yfinance}. \url{https://pypi.org/project/yfinance-cache/}
-    \item  “Spring\_layout — NetworkX 2.8.7 Documentation.” \textit{Networkx.org}, \url{networkx.org/documentation/stable/reference/generated/networkx.drawing.layout.spring_layout.html}.
-    \item “Cluster Layout — NetworkX 3.6.1 Documentation.” \textit{Networkx.org, 2025}, \url{networkx.org/documentation/stable/auto_examples/drawing/plot_clusters.html}.
-    \item Fortunato, Santo, and Claudio Castellano. “Community Structure in Graphs.” Springer EBooks, 1 Jan. 2012, pp. 490–512, \url{https://doi.org/10.1007/978-1-4614-1800-9_33}.
 \end{enumerate}
 
 
