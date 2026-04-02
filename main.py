@@ -181,6 +181,7 @@ def register_callbacks(app: Dash,
         else:
             fig = figures_by_threshold[view_option][selected_threshold]
 
+        # https://community.plotly.com/t/set-intial-mode-to-box-select/22073
         fig.update_layout(dragmode='pan')
         return fig, most_connections_panel(graph)
 
@@ -274,6 +275,7 @@ def run_full_pipeline(use_sample: bool = True) -> None:
 
     default_threshold = 0.7
     visualization_figure = figures_by_threshold['Standard'][default_threshold]
+    # https://community.plotly.com/t/set-intial-mode-to-box-select/22073
     visualization_figure.update_layout(dragmode='pan')
     app.layout = html.Div([
         html.Div([
