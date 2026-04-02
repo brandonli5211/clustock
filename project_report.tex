@@ -51,11 +51,32 @@ We also implement the crash simulation and pivot-candidate ideas from our propos
 
 
 \section*{Visualization Overview}
-TODO: Explain how the visualization works, as well as the libraries involved to accomplish the visualization.
+Our visualization is primarily created through the \texttt{plotly.graph\_objects}, with the positioning of graph nodes controlled by \texttt{networkx}.
+
+
+Our visualization used many aspects such as color and node size to improve viewer clarity. The edge traces are built such that positive correlations create green edges, while red edges indicate that the edge represents a negative correlation. The node sizes are normalized such that a node with a higher degree would appear relatively larger in size than another node with a lower degree. The nodes themselves are generally colored by sector. Additionally, when searching for pivot candidates from a start node, the colors change so that the start ticker and identified candidates are highlighted in different colours, while the rest of the nodes are greyed out.\\
+
+Node and edge traces are built into \texttt{go.Scatter} objects, which are then built into a \texttt{go.Figure} object to be sent to the Plotly \texttt{dash} app. We used the \texttt{dash} library to build a Flask app around our go.Figure, since dash includes built-in core components to make inputs. This improves the user interface and allows for easier user control of our interactive graph. Our interface includes a slider to control the threshold, a radio menu to control the view options, and a drop-down search to search for pivot candidates from a start ticker. These inputs interface with the elements they update through functions that have the \texttt{@callback decorator}. These decorators mean that the function runs whenever the input is used\\
+
+To reduce the time it takes to change between different figures for different thresholds or view options, each combination of threshold and view option is precomputed. These figures are computed at the beginning of the pipeline and are stored in \texttt{figures\_by\_threshold}. This is a nested dictionary with the outer dictionary mapping the three view options of 'Standard', 'Sector', and 'Community' to an inner dictionary that maps the threshold to the figure. This allows each figure to be quickly accessed. Thus, each time the threshold slider or view option is changed, we can update the figure by returning the value from our dictionary rather than going through the process of creating each figure every time. However, this approach is not feasible when we look for pivot candidates by starter ticker, as there are a large number of possible combinations. Thus, we build the traces for the figure each time we search for pivot candidates.
+
+
+We split our visualization into 3 view options: \textbf{Standard, Sector, and Community}.
+
+Standard view uses \texttt{NetworkX.spring\_layout}, which "[treats] edges as springs holding nodes close, while treating nodes as repelling objects"\textsuperscript{9}. This visually groups stocks into clusters where nodes with edge connections to one another would be closer together, and nodes that did not have connections would be repelled outwards to the edges. However, this did not create a clear viewing experience because most of the nodes clustered into 1 large group with only a few small groups and standalone nodes on the outside.
+
+Sector view groups the nodes into clusters based on their GICS sector through a clever layout trick taken from the NetworkX documentation.\textsuperscript{10}. We create a \texttt{nx.cycle\_graph} with length equal to the number of sectors. This creates a circle-like graph in which all the nodes are contained in a singular cycle. The positions of these nodes are then used as the centers for spring layouts of subgraphs representing each sector. Thus, all nodes of the same sector are grouped in close proximity.
+
+Community view uses \texttt{nx.greedy\_modularity\_communities} to group the stocks into graph communities, where the number of communities matches the number of GICS sectors in the graph. Communities are often defined as groups of vertices where the density in that group is higher than the average density in the graph. \textsuperscript{11}. Community view takes the same trick from Sector view, grouping the stocks proximally into the clusters that the NetworkX algorithm finds. Essentially, if you asked the algorithm to group the full stock dataset into 11 sectors instead of the 11 GIC sectors present, this view shows how it would form groupings. \\
+
+At the bottom of our page, we also have panels showing useful statistics regarding the graph density and the average absolute Pearson coefficient of the sector subgraphs. Under the headers for these panels, we show the values for the full graph. Further underneath, we have the values for the sectors ranked from greatest to least, so that the viewer can compare the density and correlation metrics between sectors to judge relative accuracy in the groupings. Note that density updates with the threshold changes, but the average absolute Pearson coefficient of the sectors does not because it can only be done on a complete graph.
+
+
+\\
 
 
 \section*{Running the Program}
-The provided file \texttt{requirements.txt} provides all the required modules to run the program. Note that when installing \texttt{yfinance-cache}, an underscore must be used instead of a hyphen, i.e. \texttt{pip install yfinance\_cache}.\\
+The provided file \texttt{requirements.txt} provides all the required modules to run the program. Note that when installing \texttt{yfinance-cache}, an underscore must be used instead of a hyphen, i.e. \texttt{pip install yfinance\_cache}. You can run \texttt{pip install -r requirements.txt} to install on the necessary packages.\\
 Because we are retrieving data through the Yahoo Finance API, this project does not rely on a static dataset, as mentioned previously. However, the project uses the S\&P 100 tickers (as of 2024-2025) and their price data from March 2nd, 2026 to March 31st, 2026 as the project's dataset, provided in \texttt{py-yfinance-cache.zip}. The data must be extracted into \texttt{C:\textbackslash Users\textbackslash <Username>\textbackslash AppData\textbackslash Local\textbackslash yfinance\_cache} for the data to load in the program. When \texttt{main.py} is run, it takes the tickers from \texttt{constants.py} and retrieves the corresponding historical price data directly from the Yahoo Finance API. If the data already exists in the zip file, then it will be retrieved from there, significantly decreasing the retrieval time.\\
 In the unlikely chance that the download fails, in the function call on line 36 of \texttt{main.py}, please replace the arguments with \texttt{tickers, thresholds, date\_range=('2026-03-02', '2026-04-01'), interval='1d'} to retrieve exclusively the data included in the zip file.\\
 When \texttt{main.py} is run and you are not using data from the provided zip file, you may notice that the result will return slowly, which is due to the nature of \texttt{yfinance\_cache.download()}. With a larger sample, it will take some time to download each ticker's data before creating the graph.\\
@@ -63,14 +84,14 @@ The program visualization requires self-hosting. When the \texttt{main.py} is ru
 The following shows something similar to the initial appearance of the graph. Hovering the mouse over a node shows the node's ticker, GICS sector, and the number of neighbors. The larger a node, the more neighbors it has. In this mode, nodes are clustered by the number of correlations with other nodes. On the right hand side of the screen is a toggleable legend which hides the corresponding symbol on the graph upon clicking, as well as a choice of node grouping and a ranking of the nodes with the most connections. The bottom contains a slider to set the threshold level, and scrolling down will reveal additional information about the graph such as graph density and more detailed Pearson coefficient data for each sector.
 \begin{figure}[H]
         \centering
-        \includegraphics[width=0.9\linewidth]{image1.png}
+        \includegraphics[width=0.9\linewidth]{images/image1.png}
         \caption{An image of what the graph could look like upon opening the site.}
         \label{fig:placeholder}
     \end{figure}
 As mentioned previously, using the slider at the bottom will show only the edges whose absolute values exceed the threshold. The corresponding information changes along with the graph.
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\linewidth]{image2.png}
+    \includegraphics[width=0.9\linewidth]{images/image2.png}
     \caption{Stock Network Correlation Graph - 0.5 Threshold}
     \label{fig:placeholder}
 \end{figure}
@@ -79,20 +100,20 @@ First, \texttt{View Options} allows different graph orientations, as mentioned i
 Then, \texttt{Pivot Candidates} allows you to select any node in the graph as a target stock, highlighted in yellow. Typing or selecting a valid node name from the search bar will show that target's pivot candidates, highlighted in purple. Furthermore, once a target stock is selected, you can select any of its candidates to become your new target by clicking on any of the candidates listed below the search bar. The pivot candidates menu can always be exited by clicking the 'X' icon in the menu's search bar.
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\linewidth]{image3.png}
+    \includegraphics[width=0.9\linewidth]{images/image3.png}
     \caption{Correlation Graph with AMZN as its target stock.}
     \label{fig:placeholder}
 \end{figure}
 Finally, on the top right corner of the site, there is the Plotly Modebar:
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\linewidth]{image4.png}
+    \includegraphics[width=0.9\linewidth]{images/image4.png}
     \caption{The Plotly Modebar, outlined in red.}
     \label{fig:placeholder}
 \end{figure}
 With it, you can zoom in and out and pan around the graph, along with a few other actions.
 \section*{Changes from Proposal}
-A few changes were made from our original proposal: 
+A few changes were made from our original proposal:
 \begin{itemize}
     \item Generalized the problem statement. Initially, the project aimed to analyze sector distinctness during periods of high volatility. Upon further discussion, the group concluded that, ideally, the graph would provide meaningful results during any economic period.
     \item Implementing a mode that switches clustering in the graph from the number of edges to grouping the nodes by sector. This was inspired by our TA and provides a different perspective in the analysis.
@@ -131,7 +152,20 @@ Overall, the results were able to answer our question: Many edges appear to be b
     \item Plotly Technologies Inc. (2024). \textit{Interactive Graphing Library for Python}. \url{https://plotly.com/python/}
     \item MSCI and S\&P Dow Jones Indices. (2023). \textit{GICS Sector Methodology Overview}.
     \item \textit{yfinance-cache} (Python package). Caching wrapper for \texttt{yfinance}. \url{https://pypi.org/project/yfinance-cache/}
-\end{enumerate}
-
+    \item  “Spring\_layout — NetworkX 2.8.7 Documentation.” \textit{Networkx.org}, \url{networkx.org/documentation/stable/reference/generated/networkx.drawing.layout.spring_layout.html}.
+    \item “Cluster Layout — NetworkX 3.6.1 Documentation.” \textit{Networkx.org, 2025}, \url{networkx.org/documentation/stable/auto_examples/drawing/plot_clusters.html}.
+    \item Fortunato, Santo, and Claudio Castellano. “Community Structure in Graphs.” Springer EBooks, 1 Jan. 2012, pp. 490–512, \url{https://doi.org/10.1007/978-1-4614-1800-9_33}.
+    \item GeeksforGeeks. “How to Check If a Deque Is Empty in Python?” \textit{GeeksforGeeks}, 28 Dec. 2022, \url{www.geeksforgeeks.org/python/how-to-check-if-a-deque-is-empty-in-python/}. Accessed 2 Apr. 2026.
+    \item Vrsalovic, Vinko. “Does Python Have a Ternary Conditional Operator?” \textit{Stack Overflow}, 27 Dec. 2008, \url{stackoverflow.com/questions/394809/does-python-have-a-ternary-conditional-operator}. Accessed 2 Apr. 2026.
+    \sloppy
+    \item atharvakatre. “How to Set Box Select as the Default instead of Zoom on the Modebar?” \textit{Plotly Community Forum}, 6 Mar. 2022, \url{community.plotly.com/t/how-to-set-box-select-as-the-default-instead-of-zoom-on-the-modebar/61663/2}. Accessed 2 Apr. 2026.
+    \item jcthomas. “Set Intial Mode to Box Select.” \textit{Plotly Community Forum}, 9 Apr. 2019, \url{community.plotly.com/t/set-intial-mode-to-box-select/22073}. Accessed 2 Apr. 2026.
+    \item BlackMath. “How to Change the Website Tab Name in Dash-Plotly Using Python.” \textit{Stack Overflow}, 14 Oct. 2021, \url{stackoverflow.com/questions/69570145/how-to-change-the-website-tab-name-in-dash-plotly-using-python.}
+    \item tcbegley. “Dash / CSS: Make a Div Full Screen.” \texttt{Plotly Community Forum}, 13 Mar. 2021, \url{community.plotly.com/t/dash-css-make-a-div-full-screen/50982/2}. Accessed 2 Apr. 2026.
+    \item Fran. “How to Animate Dash Graphs | Dash-Resources.com.” \texttt{Dash-Resources.com}, 2 Feb. 2025, \url{dash-resources.com/how-to-animate-dash-graphs/}. Accessed 2 Apr. 2026.
+    \item Plotly. “Basic Callbacks | Dash for Python Documentation | Plotly.” \textit{Dash.plotly.com}, \url{dash.plotly.com/basic-callbacks}.
+    \item Plotly. “Slider | Dash for Python Documentation | Plotly.” \textit{Plotly.com}, 2024, \url{dash.plotly.com/dash-core-components/slider}.
+    \item Plotly. “RadioItems | Dash for Python Documentation | Plotly.” \texttt{Dash.plotly.com}, \url{dash.plotly.com/dash-core-components/radioitems}.
+\end{enumerate}`
 
 \end{document}
