@@ -6,10 +6,9 @@ edges store Pearson correlation weights above a threshold.
 
 from __future__ import annotations
 
-from networkx.classes import number_of_edges
+from collections import deque
 
 from constants import BFS_DEPTH, SECTORS
-from collections import deque
 
 
 class _Vertex:
@@ -36,19 +35,46 @@ class CorrelationGraph:
         self._vertices = {}
 
     def add_node(self, ticker: str, sector: str = 'Unknown') -> None:
-        """Add a stock node if not already present."""
+        """Add a stock node if not already present.
+
+        >>> graph = CorrelationGraph()
+        >>> graph.add_node('AAPL', 'Technology')
+        >>> graph.get_sector('AAPL')
+        'Technology'
+        >>> graph.add_node('AAPL', 'Healthcare')
+        >>> graph.get_sector('AAPL')
+        'Technology'
+        """
         if ticker not in self._vertices:
             self._vertices[ticker] = _Vertex(ticker, sector)
 
     def add_edge(self, ticker1: str, ticker2: str, weight: float) -> None:
-        """Add undirected edge between two stocks with given correlation weight."""
+        """Add undirected edge between two stocks with given correlation weight.
+
+        >>> graph = CorrelationGraph()
+        >>> graph.add_node('AAPL', 'Technology')
+        >>> graph.add_node('MSFT', 'Technology')
+        >>> graph.add_edge('AAPL', 'MSFT', 0.75)
+        >>> graph.get_neighbours('AAPL')
+        {'MSFT': 0.75}
+        >>> graph.get_neighbours('MSFT')
+        {'AAPL': 0.75}
+        """
         if ticker1 not in self._vertices or ticker2 not in self._vertices:
             return
         self._vertices[ticker1].neighbours[ticker2] = weight
         self._vertices[ticker2].neighbours[ticker1] = weight
 
     def get_weight(self, ticker1: str, ticker2: str) -> float:
-        """Get the correlation weight between two nodes"""
+        """Get the correlation weight between two nodes.
+
+        >>> graph = CorrelationGraph()
+        >>> graph.add_node('AAPL', 'Technology')
+        >>> graph.add_node('MSFT', 'Technology')
+        >>> graph.add_edge('AAPL', 'MSFT', -0.4)
+        >>> graph.get_weight('AAPL', 'MSFT')
+        -0.4
+        """
         return self.get_neighbours(ticker1)[ticker2]
 
     def get_all_tickers(self) -> list[str]:
@@ -56,19 +82,45 @@ class CorrelationGraph:
         return list(self._vertices.keys())
 
     def get_sector(self, ticker: str) -> str:
-        """Return GICS sector for a ticker. Returns 'Unknown' if ticker not in graph."""
+        """Return GICS sector for a ticker. Returns 'Unknown' if ticker not in graph.
+
+        >>> graph = CorrelationGraph()
+        >>> graph.add_node('XOM', 'Energy')
+        >>> graph.get_sector('XOM')
+        'Energy'
+        >>> graph.get_sector('FAKE')
+        'Unknown'
+        """
         if ticker not in self._vertices:
             return 'Unknown'
         return self._vertices[ticker].sector
 
     def get_neighbours(self, ticker: str) -> dict[str, float]:
-        """Return dict of neighbour ticker -> correlation weight."""
+        """Return dict of neighbour ticker -> correlation weight.
+
+        >>> graph = CorrelationGraph()
+        >>> graph.add_node('AAPL', 'Technology')
+        >>> graph.get_neighbours('AAPL')
+        {}
+        >>> graph.get_neighbours('FAKE')
+        {}
+        """
         if ticker not in self._vertices:
             return {}
         return dict(self._vertices[ticker].neighbours)
 
     def density(self) -> float:
-        """Compute graph density D = 2|E| / (|V|(|V|-1))."""
+        """Compute graph density D = 2|E| / (|V|(|V|-1)).
+
+        >>> graph = CorrelationGraph()
+        >>> graph.density()
+        0.0
+        >>> graph.add_node('AAPL', 'Technology')
+        >>> graph.add_node('MSFT', 'Technology')
+        >>> graph.add_edge('AAPL', 'MSFT', 0.8)
+        >>> graph.density()
+        1.0
+        """
         n = len(self._vertices)
         if n <= 1:
             return 0.0
@@ -98,31 +150,39 @@ class CorrelationGraph:
 
         Preconditions:
             - start_ticker is in the graph.
+
+        >>> graph = CorrelationGraph()
+        >>> for ticker in ['AAPL', 'MSFT', 'GOOG']:
+        ...     graph.add_node(ticker, 'Technology')
+        >>> graph.add_edge('AAPL', 'MSFT', 0.8)
+        >>> graph.add_edge('MSFT', 'GOOG', 0.7)
+        >>> graph.bfs_crash_simulation('AAPL', max_depth=1) == {0: {'AAPL'}, 1: {'MSFT'}}
+        True
         """
         queue = deque()
         visited = {}
-        nodes_at_depths = {} # Output set
+        nodes_at_depths = {}  # Output set
 
-        #BFS
+        # BFS
         queue.append(start_ticker)
         visited[start_ticker] = 0
 
         # https://www.geeksforgeeks.org/python/how-to-check-if-a-deque-is-empty-in-python/
         while len(queue) != 0:
             curr = queue.popleft()
-            if visited[curr] > max_depth: # if we reach a node greater than max, we're past the last layer
+            if visited[curr] > max_depth:  # if we reach a node greater than max, we're past the last layer
                 return nodes_at_depths
 
-            if visited[curr] not in nodes_at_depths.keys():
+            if visited[curr] not in nodes_at_depths:
                 nodes_at_depths[visited[curr]] = set()
 
             nodes_at_depths[visited[curr]].add(curr)
 
             # Adding neighbours to the queue
-            for next in self.get_neighbours(curr):
-                if next not in visited.keys():
-                    queue.append(next)
-                    visited[next] = visited[curr] + 1
+            for neighbour in self.get_neighbours(curr):
+                if neighbour not in visited:
+                    queue.append(neighbour)
+                    visited[neighbour] = visited[curr] + 1
 
         return nodes_at_depths
 
@@ -155,7 +215,18 @@ class CorrelationGraph:
         return sorted(candidates, key=lambda pair: pair[1], reverse=True)
 
     def sector_density(self, sector: str) -> float:
-        """Return the density of the isolated subgraph of the given sector"""
+        """Return the density of the isolated subgraph of the given sector.
+
+        >>> graph = CorrelationGraph()
+        >>> graph.add_node('AAPL', 'Technology')
+        >>> graph.add_node('MSFT', 'Technology')
+        >>> graph.add_node('XOM', 'Energy')
+        >>> graph.add_edge('AAPL', 'MSFT', 0.9)
+        >>> graph.sector_density('Technology')
+        1.0
+        >>> graph.sector_density('Energy')
+        0.0
+        """
 
         tickers_in_sector = []
 
@@ -166,7 +237,7 @@ class CorrelationGraph:
         sector_subgraph = self.subgraph(tickers_in_sector)
         return sector_subgraph.density()
 
-    def get_ordered_sector_densities(self, limit: int = 11) -> list[tuple[str, int]]:
+    def get_ordered_sector_densities(self, limit: int = 11) -> list[tuple[str, float]]:
         """Return list or ordered tuples mapping (sector, density) sorted from highest to least density"""
         densities = []
         for sector in SECTORS:
@@ -176,20 +247,34 @@ class CorrelationGraph:
         return densities[:limit]
 
     def get_average_abs_weight(self) -> float:
-        """Return the average absolute weight between two nodes in the graph"""
-        # This graph has unweighted edges, so I will doublecount the total edge weights and doublecount the total
-        # number of edges because this is easier than storing each edge that has been used so far
+        """Return the average absolute weight between two nodes in the graph.
+
+        >>> graph = CorrelationGraph()
+        >>> graph.get_average_abs_weight()
+        0.0
+        >>> graph.add_node('AAPL', 'Technology')
+        >>> graph.add_node('MSFT', 'Technology')
+        >>> graph.add_node('XOM', 'Energy')
+        >>> graph.add_edge('AAPL', 'MSFT', -0.4)
+        >>> graph.add_edge('AAPL', 'XOM', 0.8)
+        >>> round(graph.get_average_abs_weight(), 2)
+        0.6
+        """
+        # Iterate over each undirected edge once. This works for sparse graphs too,
+        # and avoids KeyError from asking for weights between non-neighbours.
         edge_total = 0
-        correlation_total = 0
+        correlation_total = 0.0
         for u in self.get_all_tickers():
-            for v in self.get_all_tickers():
-                if u != v:
-                    correlation_total += abs(self.get_weight(u, v))
+            for v, weight in self.get_neighbours(u).items():
+                if u < v:
+                    correlation_total += abs(weight)
                     edge_total += 1
 
+        if edge_total == 0:
+            return 0.0
         return correlation_total / edge_total
 
-    def sector_average_abs_pearson_coefficients(self, sector: str) -> float:
+    def sector_avg_abs_pearson(self, sector: str) -> float:
         """Return the average absolute value of the pearson correlation coefficient between two tickers
         in a sector; if a sector contains only 1, return -1 as the output"""
         tickers_in_sector = []
@@ -205,11 +290,11 @@ class CorrelationGraph:
         else:
             return sector_subgraph.get_average_abs_weight()
 
-    def get_ordered_sector_abs_pearson_coefficients(self, limit: int = 11) -> list[tuple[str, int]]:
+    def ordered_sector_abs_pearsons(self, limit: int = 11) -> list[tuple[str, float]]:
         """Return list or ordered tuples mapping (sector, density) sorted from highest to least density"""
         abs_pearson_coefficients = []
         for sector in SECTORS:
-            abs_pearson_coefficient = self.sector_average_abs_pearson_coefficients(sector)
+            abs_pearson_coefficient = self.sector_avg_abs_pearson(sector)
             abs_pearson_coefficients.append((sector, abs_pearson_coefficient))
         abs_pearson_coefficients.sort(key=lambda pair: (-pair[1], pair[0]))
         return abs_pearson_coefficients[:limit]
@@ -218,8 +303,9 @@ class CorrelationGraph:
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
-    # import python_ta
-    # python_ta.check_all(config={
-    #     'max-line-length': 120,
-    #     'extra-imports': ['constants'],
-    # })
+    import python_ta
+    python_ta.check_all(config={
+        'extra-imports': ['constants', 'collections'],
+        'allowed-io': [],
+        'max-line-length': 120
+    })
