@@ -386,7 +386,7 @@ def run_full_pipeline(use_sample: bool = True) -> None:
                          style={'fontWeight': '600', 'marginBottom': '4px'}),
                 html.Div(
                     children=[
-                        f"Average Absolute Value of Pearson Coefficients in Sector Subgraph: \
+                        f"Average Absolute Value of Pearson Coefficients in Full Graph: \
                         {round(complete_graph.get_average_abs_weight(), 5)}",
                         avg_abs_pearson_panel(complete_graph)
                     ],
