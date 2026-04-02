@@ -7,3 +7,12 @@ Configuration file for the plotly visualization
 CONFIG = {
     'scrollZoom': True
 }
+
+
+if __name__ == '__main__':
+    import python_ta
+    python_ta.check_all(config={
+        'extra-imports': [],
+        'allowed-io': [],
+        'max-line-length': 120
+    })
