@@ -18,6 +18,9 @@ def compute_log_returns(prices: list[float]) -> list[float]:
     Returns list of length len(prices)-1.
     Preconditions:
     - len(prices) >= 2
+
+    >>> [round(x, 4) for x in compute_log_returns([100.0, 110.0, 121.0])]
+    [0.0953, 0.0953]
     """
     return [log(prices[i] / prices[i - 1]) for i in range(1, len(prices))]
 
@@ -30,6 +33,17 @@ def log_return_list(df: pd.DataFrame) -> dict[str, list[float]]:
 
     Preconditions:
         - df has columns Ticker, Date, Close as produced by data_reader.download_tickers.
+
+    >>> df = pd.DataFrame({
+    ...     'Ticker': ['AAA', 'AAA', 'BBB', 'BBB'],
+    ...     'Date': pd.to_datetime(['2026-01-01', '2026-01-02', '2026-01-01', '2026-01-02']),
+    ...     'Close': [100.0, 110.0, 50.0, 55.0]
+    ... })
+    >>> returns = log_return_list(df)
+    >>> sorted(returns.keys())
+    ['AAA', 'BBB']
+    >>> [round(x, 4) for x in returns['AAA']]
+    [0.0953]
     """
     log_returns = {}
     for ticker, group in df.groupby('Ticker'):
@@ -50,6 +64,13 @@ def pearson_correlation(a: list[float], b: list[float]) -> float:
 
     Preconditions:
     -  len(a) == len(b)
+
+    >>> round(pearson_correlation([1.0, 2.0, 3.0], [2.0, 4.0, 6.0]), 5)
+    1.0
+    >>> round(pearson_correlation([1.0, 2.0, 3.0], [6.0, 4.0, 2.0]), 5)
+    -1.0
+    >>> pearson_correlation([2.0, 2.0, 2.0], [1.0, 2.0, 3.0])
+    0.0
     """
     n = len(a)
     a_avg = sum(a) / n
@@ -73,6 +94,19 @@ def create_edges_in_graph(graph: CorrelationGraph,
     Designed as a helper function to build_correlation_graph().
     Preconditions:
     - 0 <= threshold <= 1
+
+    >>> graph = CorrelationGraph()
+    >>> graph.add_node('AAA', 'Tech')
+    >>> graph.add_node('BBB', 'Finance')
+    >>> graph.add_node('CCC', 'Energy')
+    >>> log_returns = {
+    ...     'AAA': [1.0, 2.0, 3.0],
+    ...     'BBB': [2.0, 4.0, 6.0],
+    ...     'CCC': [3.0, 2.0, 1.0]
+    ... }
+    >>> create_edges_in_graph(graph, log_returns, ['AAA', 'BBB', 'CCC'], 0.9)
+    >>> sorted((ticker, round(weight, 1)) for ticker, weight in graph.get_neighbours('AAA').items())
+    [('BBB', 1.0), ('CCC', -1.0)]
     """
     for i in range(len(tickers)):
         for j in range(i + 1, len(tickers)):
@@ -110,8 +144,10 @@ def build_correlation_graphs(tickers: set[str],
 
 
 if __name__ == '__main__':
+    import doctest
     import python_ta
 
+    doctest.testmod()
     python_ta.check_all(config={
         'extra-imports': ['typing', 'math', 'pandas', 'correlation_graph', 'data_reader'],
         'allowed-io': [],

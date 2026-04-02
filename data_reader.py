@@ -35,6 +35,15 @@ def access_one_stock(ticker: str, ticker_dataframe: DataFrame) -> dict[str, list
     """Access the info for one stock.
         Preconditions:
             - ticker must be a valid ticker
+
+    >>> df = pd.DataFrame({
+    ...     'Ticker': ['AAA', 'AAA'],
+    ...     'Date': pd.to_datetime(['2026-01-01', '2026-01-02']),
+    ...     'Open': [10.0, 11.0],
+    ...     'Close': [10.5, 11.5]
+    ... })
+    >>> access_one_stock('AAA', df)
+    {'2026-01-01': [10.0, 10.5], '2026-01-02': [11.0, 11.5]}
     """
     # Use double brackets [[ticker]] to always return a DataFrame, then reset_index()
     # so 'Ticker' becomes a regular column again (not the index).
@@ -52,6 +61,18 @@ def access_all_stocks(tickers: DataFrame) -> Any:
     """Test to access ALL info from every stock.
         Preconditions:
             - every ticker in tickers must be valid
+
+    >>> df = pd.DataFrame({
+    ...     'Ticker': ['AAA', 'AAA', 'BBB'],
+    ...     'Date': pd.to_datetime(['2026-01-01', '2026-01-02', '2026-01-01']),
+    ...     'Open': [10.0, 11.0, 20.0],
+    ...     'Close': [10.5, 11.5, 20.5]
+    ... })
+    >>> result = access_all_stocks(df)
+    >>> sorted(result.keys())
+    ['AAA', 'BBB']
+    >>> result['BBB']
+    {'2026-01-01': [20.0, 20.5]}
     """
     all_info = {}
     for ticker, group in tickers.groupby('Ticker'):
@@ -74,6 +95,15 @@ def get_sectors_for_tickers(tickers: set[str]) -> dict[str, str]:
     Returns {ticker: sector} for all tickers. Uses 'Unknown' if sector missing.
     Preconditions:
         - tickers contains valid yfinance ticker symbols
+
+    >>> old_ticker = yf.Ticker
+    >>> class FakeTicker:
+    ...     def __init__(self, ticker):
+    ...         self.info = {'sector': 'Tech'} if ticker == 'AAA' else {}
+    >>> yf.Ticker = FakeTicker
+    >>> get_sectors_for_tickers({'AAA', 'BBB'}) == {'AAA': 'Tech', 'BBB': 'Unknown'}
+    True
+    >>> yf.Ticker = old_ticker
     """
     result: dict[str, str] = {}
     for t in tickers:
@@ -100,6 +130,20 @@ def download_tickers(tickers: set[str],
     Preconditions:
         - every ticker in tickers must be a valid ticker in yfinance
         - period is not None or (start is None or end is None)
+
+    >>> old_download = yf.download
+    >>> def fake_download(_tickers, threads=False, progress=True, **params):
+    ...     index = pd.to_datetime(['2026-01-01', '2026-01-02'])
+    ...     cols = pd.MultiIndex.from_product([['Open', 'Close'], ['AAA', 'BBB']])
+    ...     values = [[10.0, 20.0, 10.5, 20.5], [11.0, 21.0, 11.5, 21.5]]
+    ...     return pd.DataFrame(values, index=index, columns=cols)
+    >>> yf.download = fake_download
+    >>> downloaded = download_tickers({'AAA', 'BBB'}, period='1mo', interval='1d')
+    >>> sorted(downloaded.columns.tolist())
+    ['Close', 'Date', 'Open', 'Ticker']
+    >>> sorted(downloaded['Ticker'].unique().tolist())
+    ['AAA', 'BBB']
+    >>> yf.download = old_download
     """
     params = {'period': period, 'interval': interval, 'start': start, 'end': end}
     params = {k: s for k, s in params.items() if s}
@@ -121,7 +165,10 @@ def download_tickers(tickers: set[str],
 
 
 if __name__ == '__main__':
+    import doctest
     import python_ta
+
+    doctest.testmod()
     python_ta.check_all(config={
         'extra-imports': ['typing', 'pandas', 'yfinance_cache'],
         'allowed-io': [],
