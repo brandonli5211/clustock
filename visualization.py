@@ -84,17 +84,16 @@ def get_sector_oriented_positions(cg: CorrelationGraph) -> dict[str,tuple[float,
     pos = {}
 
     nodes_by_sector = {}
-    for sector in SECTOR_ORDER:
-        nodes_by_sector[sector] = []
-
     for ticker in cg.get_all_tickers():
-        nodes_by_sector[cg.get_sector(ticker)].append(ticker)
+        sector = cg.get_sector(ticker)
+        if sector not in nodes_by_sector:
+            nodes_by_sector[sector] = []
+        nodes_by_sector[sector].append(ticker)
 
-    for center, sector in zip(centers, SECTOR_ORDER):
+    sector_order = ordered_sectors(list(nodes_by_sector.keys()))
+    for center, sector in zip(centers, sector_order):
         pos.update(nx.spring_layout(nx.subgraph(graph, frozenset(nodes_by_sector[sector])), center=center, seed=1430))
-        print(center, sector)
 
-    print(pos)
     return pos
 
 
