@@ -181,6 +181,7 @@ def register_callbacks(app: Dash,
             fig = figures_by_threshold[view_option][selected_threshold]
 
         # https://community.plotly.com/t/set-intial-mode-to-box-select/22073
+        # https://community.plotly.com/t/how-to-set-box-select-as-the-default-instead-of-zoom-on-the-modebar/61663/2
         fig.update_layout(dragmode='pan')
         return fig, most_connections_panel(graph)
 
@@ -423,9 +424,9 @@ if __name__ == '__main__':
     # use_sample=False for full S&P 100 (~100 tickers); True for 15 tickers (faster).
     app.run(debug=False)
     # import python_ta
-    #
-    # python_ta.check_all(config={
-    #     'extra-imports': ['compute', 'visualization', 'correlation_graph', 'constants', 'config', 'dash'],
-    #     'allowed-io': ['run_full_pipeline'],
-    #     'max-line-length': 120
-    # })
+    #     #
+    #     # python_ta.check_all(config={
+    #     #     'extra-imports': ['compute', 'visualization', 'correlation_graph', 'constants', 'config', 'dash'],
+    #     #     'allowed-io': ['run_full_pipeline'],
+    #     #     'max-line-length': 120
+    #     # })
