@@ -14,7 +14,6 @@ from correlation_graph import CorrelationGraph
 from constants import SP100_TICKERS
 from config import CONFIG
 
-
 def edge_sign_counts(graph: CorrelationGraph) -> tuple[int, int]:
     """return the number of positive and negative edges in the graph."""
     positive = 0
@@ -270,8 +269,6 @@ def run_full_pipeline(use_sample: bool = True) -> None:
     print('Opening interactive visualization...')
 
     # https://stackoverflow.com/questions/69570145/how-to-change-the-website-tab-name-in-dash-plotly-using-python
-    app = Dash(__name__)
-    app.title = "Clustock"
 
     default_threshold = 0.7
     visualization_figure = figures_by_threshold['Standard'][default_threshold]
@@ -414,12 +411,17 @@ def run_full_pipeline(use_sample: bool = True) -> None:
         })
     ])
     register_callbacks(app, graphs_by_threshold, figures_by_threshold, position_views)
-    app.run(debug=False)
+
+
+# Initialization
+app = Dash(__name__)
+app.title = "Clustock"
+run_full_pipeline(use_sample=False)
 
 
 if __name__ == '__main__':
     # use_sample=False for full S&P 100 (~100 tickers); True for 15 tickers (faster).
-    run_full_pipeline(use_sample=False)
+    app.run(debug=False)
     # import python_ta
     #
     # python_ta.check_all(config={
